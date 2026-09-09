@@ -1,75 +1,275 @@
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
+
+/* ===========================================================
+   오예상점 — 마녀의 비밀창고
+   밤빛 보라 바탕에 촛불 금빛, 반짝이는 별가루.
+   색과 모양은 아래 :root 의 값만 바꾸면 전부 따라 바뀝니다.
+   =========================================================== */
+
 :root{
-  --ink:#1d1b17; --sub:#6f675c; --line:#e3ddd2; --bg:#faf7f1; --card:#fff;
-  --accent:#8a5a2b; --accent-ink:#fff;
+  /* 밤 */
+  --night:#150e2b;        /* 창고 안쪽 어둠 */
+  --night-2:#1e1440;      /* 선반 그늘 */
+  --card:#241a4d;         /* 유리병이 놓인 자리 */
+  --card-2:#2c2059;
+
+  /* 빛 */
+  --ink:#f4eeff;          /* 달빛 글자 */
+  --sub:#b9a6e4;          /* 속삭이는 글자 */
+  --gold:#f2c76b;         /* 촛불 */
+  --gold-2:#ffe6ac;
+  --violet:#a97bff;       /* 마법 기운 */
+  --mint:#7fe9d0;         /* 물약 김 */
+
+  --line:rgba(242,199,107,.22);
+  --line-soft:rgba(169,123,255,.22);
+  --accent:var(--gold);
+  --accent-ink:#2a1b05;
+
   --max:1040px;
+  --round:18px;
 }
+
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);
+
+body{
+  margin:0;
+  color:var(--ink);
+  background:var(--night);
   font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
-  line-height:1.75;-webkit-font-smoothing:antialiased;
+  line-height:1.8;
+  -webkit-font-smoothing:antialiased;
   /* 한글은 단어 중간에서 끊지 않습니다 */
-  word-break:keep-all;overflow-wrap:break-word}
+  word-break:keep-all;overflow-wrap:break-word;
+}
+
+/* 창고 안 공기 — 구석에서 새어 나오는 보랏빛과 촛불빛 */
+body::after{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(900px 600px at 12% -5%, rgba(169,123,255,.30), transparent 60%),
+    radial-gradient(700px 500px at 88% 8%, rgba(242,199,107,.16), transparent 60%),
+    radial-gradient(800px 700px at 50% 108%, rgba(127,233,208,.12), transparent 60%);
+}
+
+/* 별가루 — 천천히 깜빡입니다 */
+body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,.9), transparent),
+    radial-gradient(1.2px 1.2px at 62% 12%, rgba(242,199,107,.9), transparent),
+    radial-gradient(1.8px 1.8px at 82% 44%, rgba(255,255,255,.7), transparent),
+    radial-gradient(1.2px 1.2px at 34% 68%, rgba(169,123,255,.9), transparent),
+    radial-gradient(1.5px 1.5px at 74% 82%, rgba(255,255,255,.75), transparent),
+    radial-gradient(1.2px 1.2px at 8% 88%, rgba(242,199,107,.7), transparent),
+    radial-gradient(1.4px 1.4px at 48% 36%, rgba(255,255,255,.6), transparent);
+  background-size:520px 520px;
+  animation:twinkle 5.5s ease-in-out infinite;
+}
+@keyframes twinkle{0%,100%{opacity:.35}50%{opacity:.9}}
+
+/* 바탕 위에 얹히는 것들 */
+header.site,.hero,main,footer.site{position:relative;z-index:1}
+
 a{color:inherit}
 .wrap{max-width:var(--max);margin:0 auto;padding:0 20px}
 
-header.site{border-bottom:1px solid var(--line);background:var(--card)}
-header.site .wrap{display:flex;align-items:center;gap:20px;height:66px}
-.brand{font-size:19px;font-weight:700;text-decoration:none;letter-spacing:-.01em}
-nav.site{margin-left:auto;display:flex;gap:18px;font-size:14px}
-nav.site a{color:var(--sub);text-decoration:none}
-nav.site a:hover{color:var(--ink)}
-.cart-count{background:var(--accent);color:var(--accent-ink);border-radius:999px;
-  padding:1px 8px;font-size:12px;margin-left:4px}
+/* --- 머리글 --- */
+header.site{
+  border-bottom:1px solid var(--line);
+  background:rgba(21,14,43,.78);
+  backdrop-filter:blur(10px);
+  position:sticky;top:0;z-index:5;
+}
+header.site .wrap{display:flex;align-items:center;gap:20px;height:70px}
 
-.hero{padding:56px 0 40px;border-bottom:1px solid var(--line)}
-.hero h1{margin:0 0 10px;font-size:32px;letter-spacing:-.02em}
-.hero p{margin:0;color:var(--sub);font-size:16px}
+.brand{
+  font-family:"Gowun Batang",serif;
+  font-size:21px;font-weight:700;text-decoration:none;letter-spacing:.01em;
+  color:var(--gold-2);
+  text-shadow:0 0 14px rgba(242,199,107,.45);
+}
+.brand::before{content:"✦ ";color:var(--violet)}
+.brand:hover{color:#fff;text-shadow:0 0 20px rgba(242,199,107,.8)}
 
-main{padding:40px 0 80px}
-h2{font-size:22px;margin:0 0 18px;letter-spacing:-.01em}
-.lead{color:var(--sub);margin:0 0 28px}
+nav.site{margin-left:auto;display:flex;gap:20px;font-size:14px;align-items:center}
+nav.site a{color:var(--sub);text-decoration:none;transition:.18s}
+nav.site a:hover{color:var(--gold-2);text-shadow:0 0 12px rgba(242,199,107,.6)}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;
-  padding:22px;text-decoration:none;display:block;transition:.15s}
-.card:hover{border-color:var(--accent);transform:translateY(-2px)}
-.card .thumb{font-size:44px;line-height:1;margin-bottom:14px}
-.card h3{margin:0 0 6px;font-size:16px}
-.card .sum{color:var(--sub);font-size:13.5px;margin:0 0 12px;min-height:40px}
-.card .price{font-weight:700}
+.cart-count{
+  background:linear-gradient(160deg,var(--gold-2),var(--gold));
+  color:var(--accent-ink);border-radius:999px;
+  padding:1px 9px;font-size:12px;font-weight:700;margin-left:5px;
+  box-shadow:0 0 12px rgba(242,199,107,.5);
+}
 
-.detail{display:grid;grid-template-columns:200px 1fr;gap:36px;align-items:start}
-.detail .thumb{font-size:110px;text-align:center;background:var(--card);
-  border:1px solid var(--line);border-radius:12px;padding:34px 0}
-.detail h1{margin:0 0 8px;font-size:26px}
-.detail .price{font-size:20px;font-weight:700;margin:0 0 22px}
-.detail .body p{margin:0 0 14px}
+/* --- 첫 화면 --- */
+.hero{padding:74px 0 58px;border-bottom:1px solid var(--line-soft);text-align:center}
+.hero h1{
+  font-family:"Gowun Batang",serif;
+  margin:0 0 14px;font-size:44px;letter-spacing:.01em;
+  color:#fff;
+  text-shadow:0 0 26px rgba(169,123,255,.75),0 0 60px rgba(242,199,107,.35);
+}
+.hero h1::after{
+  content:"🔮";display:block;font-size:26px;margin-top:10px;
+  animation:float 3.6s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-8px) rotate(4deg)}}
+.hero p{margin:0;color:var(--sub);font-size:17px;font-family:"Gowun Batang",serif}
 
-.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);
-  border:0;border-radius:8px;padding:13px 26px;font-size:15px;font-weight:600;
-  cursor:pointer;text-decoration:none;font-family:inherit}
-.btn:hover{filter:brightness(1.08)}
-.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+/* --- 본문 --- */
+main{padding:52px 0 90px}
+h2{
+  font-family:"Gowun Batang",serif;
+  font-size:26px;margin:0 0 8px;color:var(--gold-2);
+  text-shadow:0 0 18px rgba(242,199,107,.35);
+}
+h2::before{content:"✧ ";color:var(--violet)}
+h2::after{content:" ✧";color:var(--violet)}
+.lead{color:var(--sub);margin:0 0 32px;font-size:15px}
 
-table.cart{width:100%;border-collapse:collapse;background:var(--card);
-  border:1px solid var(--line);border-radius:12px;overflow:hidden}
-table.cart th,table.cart td{padding:15px 16px;border-bottom:1px solid var(--line);text-align:left}
-table.cart th{background:#f3efe7;font-size:13px;color:var(--sub);font-weight:600}
+/* --- 선반에 놓인 물건들 --- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:22px}
+
+.card{
+  position:relative;overflow:hidden;
+  background:linear-gradient(165deg,var(--card-2),var(--card));
+  border:1px solid var(--line-soft);
+  border-radius:var(--round);
+  padding:24px 22px 22px;
+  text-decoration:none;display:block;
+  box-shadow:0 10px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);
+  transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+/* 물건 위에 뜬 작은 반짝임 — 평소엔 숨어 있습니다 */
+.card::after{
+  content:"✨";position:absolute;top:14px;right:16px;
+  font-size:15px;opacity:0;transform:scale(.6) rotate(-20deg);
+  transition:.25s ease;
+}
+.card:hover{
+  transform:translateY(-6px);
+  border-color:var(--gold);
+  box-shadow:0 18px 42px rgba(0,0,0,.5),0 0 26px rgba(242,199,107,.28);
+}
+.card:hover::after{opacity:1;transform:scale(1) rotate(0)}
+
+.card .thumb{
+  font-size:42px;line-height:1;margin-bottom:16px;
+  width:78px;height:78px;display:grid;place-items:center;
+  border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,rgba(242,199,107,.28),rgba(169,123,255,.10) 60%,transparent 72%);
+  transition:transform .3s ease;
+}
+.card:hover .thumb{transform:rotate(-8deg) scale(1.06)}
+.card h3{margin:0 0 7px;font-size:16.5px;font-family:"Gowun Batang",serif;color:#fff}
+.card .sum{color:var(--sub);font-size:13.5px;margin:0 0 14px;min-height:42px;line-height:1.65}
+.card .price{font-weight:700;color:var(--gold-2);letter-spacing:.01em}
+.card .price::before{content:"✦ ";font-size:11px;color:var(--violet)}
+
+/* --- 물건 하나 자세히 --- */
+.detail{display:grid;grid-template-columns:220px 1fr;gap:40px;align-items:start}
+.detail .thumb{
+  font-size:96px;text-align:center;
+  background:
+    radial-gradient(circle at 50% 42%,rgba(242,199,107,.22),transparent 68%),
+    linear-gradient(165deg,var(--card-2),var(--card));
+  border:1px solid var(--line);
+  border-radius:var(--round);padding:38px 0;
+  box-shadow:0 12px 34px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);
+  animation:float 4.6s ease-in-out infinite;
+}
+.detail h1{font-family:"Gowun Batang",serif;margin:0 0 10px;font-size:28px;color:#fff}
+.detail .price{font-size:21px;font-weight:700;margin:0 0 24px;color:var(--gold-2)}
+.detail .body p{margin:0 0 15px;color:#ded4f5}
+
+/* --- 단추 --- */
+.btn{
+  display:inline-block;position:relative;overflow:hidden;
+  background:linear-gradient(160deg,var(--gold-2),var(--gold));
+  color:var(--accent-ink);
+  border:0;border-radius:999px;padding:14px 30px;
+  font-size:15px;font-weight:700;font-family:inherit;
+  cursor:pointer;text-decoration:none;
+  box-shadow:0 8px 22px rgba(242,199,107,.28);
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(242,199,107,.45)}
+.btn:active{transform:translateY(0)}
+.btn.ghost{
+  background:transparent;color:var(--sub);
+  border:1px solid var(--line-soft);box-shadow:none;
+  padding:9px 18px;font-size:13px;font-weight:600;
+}
+.btn.ghost:hover{color:var(--gold-2);border-color:var(--gold);box-shadow:0 0 16px rgba(242,199,107,.25)}
+
+/* --- 장바구니 --- */
+table.cart{
+  width:100%;border-collapse:collapse;
+  background:linear-gradient(165deg,var(--card-2),var(--card));
+  border:1px solid var(--line-soft);
+  border-radius:var(--round);overflow:hidden;
+  box-shadow:0 12px 34px rgba(0,0,0,.4);
+}
+table.cart th,table.cart td{padding:16px;border-bottom:1px solid var(--line-soft);text-align:left}
+table.cart th{
+  background:rgba(169,123,255,.14);
+  font-size:12.5px;color:var(--gold-2);font-weight:700;letter-spacing:.03em;
+}
 table.cart tr:last-child td{border-bottom:0}
-.total{text-align:right;font-size:19px;font-weight:700;margin:22px 0 26px}
+.total{
+  text-align:right;font-size:20px;font-weight:700;margin:24px 0 28px;
+  color:var(--gold-2);font-family:"Gowun Batang",serif;
+}
 
-.prose p{margin:0 0 16px}
-.empty{color:var(--sub);padding:52px 0;text-align:center}
+.prose p{margin:0 0 17px;color:#ded4f5}
+.empty{
+  color:var(--sub);padding:56px 0;text-align:center;
+  font-family:"Gowun Batang",serif;
+}
+.empty::before{content:"🕯️";display:block;font-size:34px;margin-bottom:14px;opacity:.85}
 
-form.pay{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:26px;max-width:480px}
-form.pay label{display:block;font-size:13px;color:var(--sub);margin:0 0 6px}
-form.pay input{width:100%;padding:11px 13px;border:1px solid var(--line);
-  border-radius:8px;margin:0 0 18px;font-size:15px;font-family:inherit;background:#fff}
+/* --- 결제 --- */
+form.pay{
+  background:linear-gradient(165deg,var(--card-2),var(--card));
+  border:1px solid var(--line-soft);
+  border-radius:var(--round);padding:28px;max-width:480px;
+  box-shadow:0 12px 34px rgba(0,0,0,.4);
+}
+form.pay label{display:block;font-size:12.5px;color:var(--gold-2);margin:0 0 7px;letter-spacing:.02em}
+form.pay input{
+  width:100%;padding:12px 14px;
+  border:1px solid var(--line-soft);border-radius:12px;
+  margin:0 0 20px;font-size:15px;font-family:inherit;
+  background:rgba(10,6,24,.55);color:var(--ink);
+  transition:.18s;
+}
+form.pay input::placeholder{color:#7a6aa0}
+form.pay input:focus{
+  outline:0;border-color:var(--gold);
+  box-shadow:0 0 0 3px rgba(242,199,107,.18);
+  background:rgba(10,6,24,.75);
+}
 
-footer.site{border-top:1px solid var(--line);padding:30px 0;color:var(--sub);font-size:13px}
+/* --- 꼬리글 --- */
+footer.site{
+  border-top:1px solid var(--line-soft);
+  padding:34px 0;color:var(--sub);font-size:13px;text-align:center;
+}
+footer.site .wrap::before{content:"🌙 ";}
 
+/* --- 작은 화면 --- */
 @media (max-width:640px){
   .detail{grid-template-columns:1fr}
-  .hero{padding:36px 0 28px}
-  .hero h1{font-size:26px}
+  .detail .thumb{font-size:76px;padding:28px 0}
+  .hero{padding:52px 0 40px}
+  .hero h1{font-size:32px}
+  .hero p{font-size:15px}
+  h2{font-size:22px}
+}
+
+/* 움직임을 줄여 달라고 설정한 분께는 멈춰서 보여 줍니다 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
 }
