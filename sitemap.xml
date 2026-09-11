@@ -1,15 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://haru-iny-shop.vercel.app//</loc>
+    <loc>https://oye-iny-shop.vercel.app/</loc>
   </url>
   <url>
-    <loc>https://haru-iny-shop.vercel.app//about.html</loc>
+    <loc>https://oye-iny-shop.vercel.app/about.html</loc>
   </url>
   <url>
-    <loc>https://haru-iny-shop.vercel.app//shipping.html</loc>
+    <loc>https://oye-iny-shop.vercel.app/shipping.html</loc>
   </url>
   <url>
-    <loc>https://haru-iny-shop.vercel.app//cart.html</loc>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p1</loc>
+  </url>
+  <url>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p2</loc>
+  </url>
+  <url>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p3</loc>
+  </url>
+  <url>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p4</loc>
+  </url>
+  <url>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p5</loc>
+  </url>
+  <url>
+    <loc>https://oye-iny-shop.vercel.app/product.html?id=p6</loc>
   </url>
 </urlset>
