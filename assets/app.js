@@ -215,6 +215,35 @@ function paintCheckout() {
     // ▼ 여기에 「결제를 마쳤다」(purchase)를 알리는 코드가 들어갑니다 (뒤 수업에서)
     //   결제 화면에서 「결제하기」로 주문서를 제출한 직후, 장바구니를 비우기 직전입니다.
     //   바로 아래에서 장바구니를 비우므로 산 상품과 금액은 여기서 읽어야 합니다.
+    // 주문 번호를 새로 만든다 - 시각과 임의의 글자를 이어 붙인다
+    const orderId = "ORD-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    // 산 상품 목록을 장바구니에서 읽어 온다 - 바로 아래에서 비우므로 여기서 읽는다
+    const bought = Cart.read().filter(i => findProduct(i.id));
+    // 산 상품 합계 - 상품 가격 × 수량의 합이고 배송비는 넣지 않는다
+    const boughtTotal = Cart.total();
+    // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+    window.dataLayer = window.dataLayer || [];
+    // 앞에서 넣은 상품 값이 섞이지 않게 먼저 비운다
+    dataLayer.push({ ecommerce: null });
+    // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
+    dataLayer.push({
+      // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
+      event: "purchase",
+      // 같이 보내는 상품 값 묶음
+      ecommerce: {
+        // 이 주문을 가려내는 번호
+        transaction_id: orderId,
+        // 어느 나라 돈인가
+        currency: "KRW",
+        // 금액 - 산 상품 합계
+        value: boughtTotal,
+        // 산 상품마다 상자 하나씩 목록에 넣는다
+        items: bought.map(i => {
+          const p = findProduct(i.id);
+          return { item_id: p.id, item_name: p.name, price: p.price, quantity: i.qty };
+        })
+      }
+    });
 
     Cart.clear();
     location.href = "done.html";
