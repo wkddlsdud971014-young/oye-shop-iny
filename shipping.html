@@ -7,6 +7,31 @@
 <meta name="description" content="언제 보내고 어떻게 바꿔 드리는지 적었습니다">
 <link rel="stylesheet" href="assets/style.css">
 
+<!-- 동의 기본값 — 태그 관리자보다 먼저 둡니다 -->
+<script>
+// 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+window.dataLayer = window.dataLayer || [];
+// 동의 신호를 통로에 넣는 창구
+function gtag(){dataLayer.push(arguments);}
+// 네 신호의 기본값 — 아직 아무것도 고르지 않은 손님은 전부 denied
+gtag('consent','default',{
+  'ad_storage':'denied',
+  'analytics_storage':'denied',
+  'ad_user_data':'denied',
+  'ad_personalization':'denied'
+});
+// 앞 화면에서 수락을 고른 손님이면 그 값을 되살린다
+try{ if(localStorage.getItem('oye_consent')==='granted'){
+  gtag('consent','update',{
+    'ad_storage':'granted',
+    'analytics_storage':'granted',
+    'ad_user_data':'granted',
+    'ad_personalization':'granted'
+  });
+} }catch(e){}
+</script>
+<!-- End 동의 기본값 -->
+
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -40,5 +65,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <footer class="site"><div class="wrap"></div></footer>
 <script src="assets/shop.js"></script>
 <script src="assets/app.js"></script>
+<script src="assets/consent.js"></script>
 </body>
 </html>
