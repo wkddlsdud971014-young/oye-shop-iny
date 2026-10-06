@@ -72,5 +72,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="assets/shop.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/consent.js"></script>
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDw8aUqNNNgHVkvRYGWJ75zydKqD_Rxjcc",
+    authDomain: "oye-shop-77cd6.firebaseapp.com",
+    projectId: "oye-shop-77cd6",
+    storageBucket: "oye-shop-77cd6.firebasestorage.app",
+    messagingSenderId: "218986352461",
+    appId: "1:218986352461:web:aa71965c31a8094a97b104"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  console.log("Firebase 연결:", app.options.projectId);
+</script>
 </body>
 </html>
