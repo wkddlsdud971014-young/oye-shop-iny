@@ -273,3 +273,13 @@ footer.site .wrap::before{content:"🌙 ";}
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
 }
+
+/* --- 머리글 로그인 칸 --- */
+.auth-slot{display:flex;gap:14px;align-items:center}
+.auth-email{
+  color:var(--sub);font-size:13px;
+  max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+@media (max-width:640px){
+  .auth-email{display:none}
+}

@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>오예상점</title>
-<meta name="description" content="실생활을 편리하게 해주는 신기한 물건을 골라 둡니다. 이걸 발견한 당신은 오예를 외치게 됩니다.">
+<title>마이페이지 — 오예상점</title>
+<meta name="description" content="로그인한 내 정보를 봅니다">
+<meta name="robots" content="noindex">
 <link rel="stylesheet" href="assets/style.css">
 
 <!-- 동의 기본값 — 태그 관리자보다 먼저 둡니다 -->
@@ -39,7 +40,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-WDM6H3L4');</script>
 <!-- End Google Tag Manager -->
-<meta name="google-site-verification" content="v2uJeyVxufc-SU-GV2rCw8chA1U_z0lVtfLW46TPYVE" />
+
 </head>
 <body>
 
@@ -58,15 +59,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </nav>
 </div></header>
 
-<section class="hero"><div class="wrap">
-  <h1 id="hero-title">오예상점</h1>
-  <p id="hero-tagline">이걸 발견한 당신은 오예를 외치게 됩니다</p>
-</div></section>
 
 <main><div class="wrap">
-  <h2>오늘의 발견</h2>
-  <p class="lead">여섯 가지를 두고 있습니다. 하나씩 눌러 보세요.</p>
-  <div class="grid" id="product-list"></div>
+  <h2>마이페이지</h2>
+  <!-- 로그인했는지 확인이 끝나기 전에는 아래 내용을 숨겨 둡니다 -->
+  <p class="lead" id="mypage-wait">확인하고 있습니다…</p>
+  <div id="mypage-body" hidden>
+    <p class="lead">로그인한 이메일 <strong id="mypage-email" data-clarity-mask="true"></strong></p>
+    <button class="btn" type="button" id="mypage-logout">로그아웃</button>
+  </div>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
 <script src="assets/shop.js"></script>
@@ -74,24 +75,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="assets/consent.js"></script>
 <script type="module" src="assets/auth.js"></script>
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { onUser, logout } from "./assets/auth.js";
 
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyDw8aUqNNNgHVkvRYGWJ75zydKqD_Rxjcc",
-    authDomain: "oye-shop-77cd6.firebaseapp.com",
-    projectId: "oye-shop-77cd6",
-    storageBucket: "oye-shop-77cd6.firebasestorage.app",
-    messagingSenderId: "218986352461",
-    appId: "1:218986352461:web:aa71965c31a8094a97b104"
-  };
+  onUser(user => {
+    // 로그인 안 했으면 로그인 화면으로 보내고, 로그인하면 여기로 다시 오게 한다
+    if (!user) {
+      location.replace("login.html?next=mypage.html");
+      return;
+    }
+    document.querySelector("#mypage-email").textContent = user.email;
+    document.querySelector("#mypage-wait").hidden = true;
+    document.querySelector("#mypage-body").hidden = false;
+  });
 
-  // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  console.log("Firebase 연결:", app.options.projectId);
+  document.querySelector("#mypage-logout").addEventListener("click", logout);
 </script>
 </body>
 </html>

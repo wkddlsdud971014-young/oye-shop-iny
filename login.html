@@ -77,6 +77,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="assets/shop.js"></script>
 <script src="assets/app.js"></script>
 <script src="assets/consent.js"></script>
+<script type="module" src="assets/auth.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import {
@@ -132,7 +133,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   );
 
   document.querySelector("#login-btn").addEventListener("click", () =>
-    run(() => signInWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value), "로그인했습니다.")
+    run(async () => {
+      await signInWithEmailAndPassword(auth, emailBox.value.trim(), passwordBox.value);
+      // 다른 화면에서 돌려보내져 왔으면 원래 가려던 화면으로 다시 보낸다
+      // 이 가게 안의 화면 이름(예: mypage.html)만 받는다
+      const next = new URLSearchParams(location.search).get("next");
+      if (next && /^[a-z0-9_-]+\.html$/.test(next)) location.href = next;
+    }, "로그인했습니다.")
   );
 
   document.querySelector("#logout-btn").addEventListener("click", () =>
