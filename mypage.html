@@ -66,10 +66,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p class="lead" id="mypage-wait">확인하고 있습니다…</p>
   <div id="mypage-body" hidden>
     <p class="lead">로그인한 이메일 <strong id="mypage-email" data-clarity-mask="true"></strong></p>
-    <!-- 인증 안 된 계정에만 보입니다 -->
-    <p id="verify-note" hidden style="margin:0 0 12px;font-size:14px;color:var(--sub)">아직 이메일 인증을 하지 않았습니다. 메일함의 인증 링크를 눌러 주세요.</p>
-    <button class="btn ghost" type="button" id="verify-resend" hidden>인증 메일 다시 보내기</button>
-    <p id="verify-result" role="status" style="margin:12px 0 24px;font-size:14px;color:var(--gold-2)"></p>
+    <!-- 인증 안 된 계정에만 보입니다 - .btn 은 display 가 정해져 있어 hidden 이 안 먹으므로 상자째 숨깁니다 -->
+    <div id="verify-box" hidden>
+      <p id="verify-note" style="margin:0 0 12px;font-size:14px;color:var(--sub)">아직 이메일 인증을 하지 않았습니다. 메일함의 인증 링크를 눌러 주세요.</p>
+      <button class="btn ghost" type="button" id="verify-resend">인증 메일 다시 보내기</button>
+      <p id="verify-result" role="status" style="margin:12px 0 24px;font-size:14px;color:var(--gold-2)"></p>
+    </div>
     <button class="btn" type="button" id="mypage-logout">로그아웃</button>
   </div>
 </div></main>
@@ -82,7 +84,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   import { sendEmailVerification } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { auth, onUser, logout } from "./assets/auth.js";
 
-  const verifyNote = document.querySelector("#verify-note");
+  const verifyBox = document.querySelector("#verify-box");
   const verifyResend = document.querySelector("#verify-resend");
   const verifyResult = document.querySelector("#verify-result");
 
@@ -94,8 +96,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
     // 열 때마다 인증 여부를 Firebase 에 새로 묻는다 - 묻지 못하면 갖고 있던 값을 쓴다
     try { await user.reload(); } catch (err) {}
-    verifyNote.hidden = user.emailVerified;
-    verifyResend.hidden = user.emailVerified;
+    // reload 가 끝난 뒤의 최신 값 - auth.currentUser 를 다시 읽는다
+    const fresh = auth.currentUser || user;
+    // 인증됐으면(true) 안내와 단추를 숨기고, 아니면 보여 준다
+    verifyBox.hidden = fresh.emailVerified === true;
     document.querySelector("#mypage-email").textContent = user.email;
     document.querySelector("#mypage-wait").hidden = true;
     document.querySelector("#mypage-body").hidden = false;
