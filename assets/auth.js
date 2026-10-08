@@ -66,6 +66,18 @@ function paintHeader(user) {
   out.textContent = "로그아웃";
   out.addEventListener("click", logout);
 
+  // 구글 프로필 사진이 있으면 이메일 앞에 작게 둔다. 없거나 못 불러오면 빼고 이메일만 보인다
+  if (user.photoURL) {
+    const photo = document.createElement("img");
+    photo.className = "auth-photo";
+    photo.src = user.photoURL;
+    photo.alt = "";
+    photo.referrerPolicy = "no-referrer";
+    photo.setAttribute("data-clarity-mask", "true");
+    photo.addEventListener("error", () => photo.remove());
+    slot.append(photo);
+  }
+
   slot.append(email, my, out);
 }
 
