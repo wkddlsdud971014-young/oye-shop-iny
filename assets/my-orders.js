@@ -2,7 +2,7 @@
    상태(status)가 바뀌면 onSnapshot 이 다시 불려 새로고침 없이 바뀐다. */
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore, collection, query, where, onSnapshot, getDocs
+  getFirestore, collection, query, where, onSnapshot, getDocs, doc, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { auth, onUser } from "./auth.js";
@@ -47,7 +47,7 @@ function watch(uid) {
     const changes = snap.docChanges().map(c => `${c.type} ${c.doc.id} ${c.doc.get("status")}`);
     console.log(`[주문 알림] 주문 ${snap.size}건 · 바뀐 것 ${changes.length}건${changes.length ? " — " + changes.join(", ") : ""}`);
     const moves = statusMoves(sub, snap);
-    paint(snap.docs);
+    paint(snap.docs, true); // 실시간으로 듣는 목록에만 「주문 취소」를 단다
     showAlerts(moves);
     showToast(moves.length);
     // 주문이 전부 delivered·canceled 면 더 들을 것이 없다
@@ -169,7 +169,7 @@ function statusCell(s) {
 }
 
 // 네 단계 — 지나온 단계 · 지금 단계 · 아직 안 온 단계. 모르는 값이면 아무 단계도 강조하지 않는다
-function stepsRow(s) {
+function stepsRow(s, id, cancellable) {
   const now = STEPS.indexOf(s);
   const ol = document.createElement("ol");
   ol.className = "order-steps";
@@ -185,12 +185,24 @@ function stepsRow(s) {
   td.className = "order-steps-cell";
   td.colSpan = 4;
   td.appendChild(ol);
+  // 정확히 paid 인 주문에만 취소 단추 — 좁은 상태 칸 대신 표 너비를 다 쓰는 단계 줄 아래에 둔다
+  if (cancellable && s === "paid") {
+    const row = document.createElement("div");
+    row.className = "order-cancel-row";
+    row.appendChild(cancelButton(id));
+    td.appendChild(row);
+  }
   const tr = document.createElement("tr");
   tr.appendChild(td);
   return tr;
 }
 
-function paint(docs) {
+// cancellable — 실시간 구독으로 받은 목록일 때만 true. 「다시 확인」(getDocs) 목록은 구독이 멈춰 있어
+// 취소 결과를 받아 그릴 길이 없으므로 취소 단추를 달지 않는다
+function paint(docs, cancellable = false) {
+  cancelButtons.clear();
+  // 서버에서 더는 paid 가 아닌 주문은 「처리 중」 표시를 거둔다
+  docs.forEach(d => { if (d.get("status") !== "paid") cancelling.delete(d.id); });
   if (!docs.length) { box.replaceChildren(note("아직 주문이 없습니다.")); return; }
 
   // 최신순 — 날짜가 없는 문서는 맨 뒤로
@@ -224,7 +236,7 @@ function paint(docs) {
     // 취소된 주문은 단계 없이 「주문 취소」만
     if (status !== "canceled") {
       tr.className = "order-main";
-      body.appendChild(stepsRow(status));
+      body.appendChild(stepsRow(status, d.id, cancellable));
     }
   });
   table.appendChild(body);
@@ -321,8 +333,77 @@ function showToast(count) {
   toastTimers.add(timer);
 }
 
+/* --- 주문 취소 (서버가 확정한 뒤에만 화면이 바뀐다) --- */
+// 서버에서 취소가 끝나기 전에는 canceled 로 그리지 않는다. 바뀐 상태는 기존 onSnapshot 이 받아 다시 그린다
+const cancelling = new Set();    // 취소를 보냈고 아직 서버에서 paid 로 보이는 주문 ID
+const cancelButtons = new Map(); // 지금 화면에 있는 취소 단추 — 다시 그릴 때마다 새로 채운다
+
+// 결과 한 줄 — 목록을 다시 그려도 지워지지 않게 목록 밖(바로 위)에 둔다
+const cancelMsg = box ? document.createElement("p") : null;
+if (cancelMsg) {
+  cancelMsg.className = "order-cancel-msg";
+  cancelMsg.setAttribute("role", "status");
+  box.before(cancelMsg);
+}
+
+function cancelButton(id) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn ghost order-cancel";
+  const busy = cancelling.has(id);
+  btn.disabled = busy;
+  btn.textContent = busy ? "취소 처리 중..." : "주문 취소";
+  btn.addEventListener("click", () => cancelOrder(id));
+  cancelButtons.set(id, btn);
+  return btn;
+}
+
+const CANCEL_FAIL = "주문을 취소하지 못했어요. 현재 주문 상태를 확인한 뒤 다시 시도해 주세요.";
+
+// 트랜잭션 안에서 거절할 때 쓰는 표시 — Firestore 오류와 구분한다
+const refuse = reason => Object.assign(new Error(reason), { refused: reason });
+
+async function cancelOrder(id) {
+  const sub = current;
+  const uid = auth.currentUser?.uid;
+  // 처리 중이면 다시 누른 것은 무시한다 · 실시간 구독 중인 본인 목록에서만
+  if (cancelling.has(id) || !sub || sub.stopped || !uid || uid !== sub.uid) return;
+  cancelling.add(id);
+  const btn = cancelButtons.get(id);
+  if (btn) { btn.disabled = true; btn.textContent = "취소 처리 중..."; }
+  cancelMsg.textContent = "";
+
+  const ref = doc(db, "orders", id);
+  try {
+    // 읽기 → 확인 → status 한 칸만 바꾸기. 이 함수는 재시도될 수 있으므로 Firestore 읽기·쓰기 말고는 아무것도 하지 않는다
+    await runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw refuse("not-found");
+      if (snap.get("userId") !== uid) throw refuse("not-owner");
+      if (snap.get("status") !== "paid") throw refuse("not-paid");
+      // items · totalPrice · createdAt · userId 는 그대로 둔다. 재고는 건드리지 않는다
+      tx.update(ref, { status: "canceled" });
+    });
+    console.log(`[주문 취소] ${id} 서버에서 취소 확정`);
+    // 그사이 로그아웃·계정 변경이면 이전 사람 화면에 아무것도 쓰지 않는다
+    if (current === sub && auth.currentUser?.uid === uid) cancelMsg.textContent = "주문이 취소됐어요.";
+    // 「처리 중」은 onSnapshot 이 canceled 를 가져와 다시 그릴 때 거둔다
+  } catch (err) {
+    console.log(`[주문 취소] ${id} 실패 — ${err.refused || err.code || err.name}`);
+    cancelling.delete(id);
+    if (current !== sub || auth.currentUser?.uid !== uid) return;
+    // 화면의 상태는 바꾸지 않는다. 결과가 불확실할 때(연결 끊김 등)도 같은 문구로 먼저 상태를 확인하게 한다
+    cancelMsg.textContent = CANCEL_FAIL;
+    const b = cancelButtons.get(id);
+    if (b) { b.disabled = false; b.textContent = "주문 취소"; }
+  }
+}
+
 function clearAlerts() {
   if (alerts) alerts.replaceChildren();
+  // 이전 계정의 취소 결과와 처리 중 표시도 지운다
+  cancelling.clear();
+  if (cancelMsg) cancelMsg.textContent = "";
   // 이전 계정의 토스트와 남은 타이머도 함께 지운다
   toastTimers.forEach(clearTimeout);
   toastTimers.clear();

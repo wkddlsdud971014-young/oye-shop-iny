@@ -395,3 +395,10 @@ table.cart td.order-steps-cell{padding-top:2px}
   .order-toasts{top:10px}
   .order-toast{font-size:13px;padding:9px 14px;white-space:normal;word-break:keep-all;text-align:center}
 }
+
+/* --- 내 주문 취소 (마이페이지) — 단계 줄 아래 오른쪽 --- */
+.order-cancel-row{margin-top:12px;text-align:right}
+.btn.ghost.order-cancel{padding:7px 16px;font-size:12.5px;white-space:nowrap}
+.btn.ghost.order-cancel:disabled{cursor:default;opacity:.7;transform:none;box-shadow:none}
+.order-cancel-msg{margin:0 0 12px;font-size:14px;color:var(--gold-2)}
+.order-cancel-msg:empty{display:none}
