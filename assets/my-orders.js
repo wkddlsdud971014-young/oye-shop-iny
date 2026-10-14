@@ -115,6 +115,50 @@ const note = text => {
 // 서버 시각이 아직 안 정해졌으면 어림값을 쓴다
 const orderedAt = d => d.get("createdAt", { serverTimestamps: "estimate" });
 
+/* --- 상태 글자와 진행 단계 --- */
+// Firestore 값(영어 소문자)은 그대로 두고 화면 글자만 바꾼다
+const STEPS = ["paid", "preparing", "shipped", "delivered"];
+const STATUS_TEXT = new Map([
+  ["paid", "주문 완료"],
+  ["preparing", "상품 준비 중"],
+  ["shipped", "배송 중"],
+  ["delivered", "배송 완료"],
+  ["canceled", "주문 취소"]
+]);
+// 다섯 가지 밖의 값(오타 포함)은 영어를 보이지 않고 「확인 중」
+const statusText = s => STATUS_TEXT.get(s) ?? "확인 중";
+
+function statusCell(s) {
+  const td = document.createElement("td");
+  const span = document.createElement("span");
+  span.className = "order-status" + (s === "canceled" ? " is-canceled" : STATUS_TEXT.has(s) ? "" : " is-unknown");
+  span.textContent = statusText(s);
+  td.appendChild(span);
+  return td;
+}
+
+// 네 단계 — 지나온 단계 · 지금 단계 · 아직 안 온 단계. 모르는 값이면 아무 단계도 강조하지 않는다
+function stepsRow(s) {
+  const now = STEPS.indexOf(s);
+  const ol = document.createElement("ol");
+  ol.className = "order-steps";
+  ol.setAttribute("aria-label", "주문 진행 단계");
+  STEPS.forEach((step, i) => {
+    const li = document.createElement("li");
+    li.textContent = STATUS_TEXT.get(step);
+    if (now >= 0 && i < now) li.className = "is-done";
+    else if (i === now) { li.className = "is-current"; li.setAttribute("aria-current", "step"); }
+    ol.appendChild(li);
+  });
+  const td = document.createElement("td");
+  td.className = "order-steps-cell";
+  td.colSpan = 4;
+  td.appendChild(ol);
+  const tr = document.createElement("tr");
+  tr.appendChild(td);
+  return tr;
+}
+
 function paint(docs) {
   if (!docs.length) { box.replaceChildren(note("아직 주문이 없습니다.")); return; }
 
@@ -135,16 +179,22 @@ function paint(docs) {
     const cells = [
       at?.toDate ? at.toDate().toLocaleString("ko-KR") : "",
       (Array.isArray(o.items) ? o.items : []).map(i => i?.name ?? "").join(", "),
-      typeof o.totalPrice === "number" ? won(o.totalPrice) : String(o.totalPrice ?? ""),
-      String(o.status ?? "") // 원문 그대로
+      typeof o.totalPrice === "number" ? won(o.totalPrice) : String(o.totalPrice ?? "")
     ];
+    const status = String(o.status ?? "");
     const tr = document.createElement("tr");
     cells.forEach(text => {
       const td = document.createElement("td");
       td.textContent = text;
       tr.appendChild(td);
     });
+    tr.appendChild(statusCell(status));
     body.appendChild(tr);
+    // 취소된 주문은 단계 없이 「주문 취소」만
+    if (status !== "canceled") {
+      tr.className = "order-main";
+      body.appendChild(stepsRow(status));
+    }
   });
   table.appendChild(body);
   box.replaceChildren(table);

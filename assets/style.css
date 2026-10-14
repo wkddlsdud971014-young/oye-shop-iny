@@ -294,3 +294,46 @@ footer.site .wrap::before{content:"🌙 ";}
 @media (max-width:640px){
   .auth-email{display:none}
 }
+
+/* --- 내 주문 상태와 진행 단계 (마이페이지) --- */
+table.cart tr.order-main td{border-bottom:0}
+table.cart td.order-steps-cell{padding-top:2px}
+.order-status{font-weight:700;color:var(--ink);white-space:nowrap}
+.order-status.is-canceled{color:#ff8a8a}
+.order-status.is-unknown{color:var(--sub);font-weight:600}
+.order-steps{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(4,1fr);counter-reset:step;
+}
+.order-steps li{
+  position:relative;counter-increment:step;
+  padding-top:32px;text-align:center;
+  font-size:12.5px;line-height:1.4;color:var(--sub);opacity:.55;
+}
+/* 동그라미 — 숫자, 지나온 단계는 ✓ */
+.order-steps li::before{
+  content:counter(step);
+  position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:1;
+  width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:12px;font-weight:700;
+  background:var(--night-2);border:1px solid var(--line-soft);color:var(--sub);
+}
+/* 앞 단계와 잇는 선 */
+.order-steps li + li::after{
+  content:"";position:absolute;top:11px;right:50%;width:100%;height:2px;
+  background:var(--line-soft);
+}
+.order-steps li.is-done{opacity:1}
+.order-steps li.is-done::before{content:"✓";background:rgba(169,123,255,.35);border-color:var(--violet);color:var(--ink)}
+.order-steps li.is-done::after,.order-steps li.is-current::after{background:var(--violet)}
+.order-steps li.is-current{opacity:1;color:var(--gold-2);font-weight:700}
+.order-steps li.is-current::before{
+  background:var(--violet);border-color:var(--gold-2);color:#fff;
+  box-shadow:0 0 0 4px rgba(169,123,255,.25),0 0 16px rgba(169,123,255,.6);
+}
+@media (max-width:640px){
+  .order-status{white-space:normal;word-break:keep-all}
+  table.cart td.order-steps-cell{padding-left:6px;padding-right:6px}
+  .order-steps li{font-size:11px;padding-top:30px;word-break:keep-all}
+}
