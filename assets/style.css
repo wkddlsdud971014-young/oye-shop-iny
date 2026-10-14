@@ -337,3 +337,34 @@ table.cart td.order-steps-cell{padding-top:2px}
   table.cart td.order-steps-cell{padding-left:6px;padding-right:6px}
   .order-steps li{font-size:11px;padding-top:30px;word-break:keep-all}
 }
+
+/* --- 내 주문 상태 변경 알림 (마이페이지) --- */
+.order-alerts{display:grid;gap:12px;margin:0 0 16px}
+.order-alerts:empty{display:none}
+.order-alert{
+  position:relative;padding:14px 52px 14px 18px;
+  background:linear-gradient(165deg,rgba(169,123,255,.30),var(--card));
+  border:1px solid var(--violet);border-radius:14px;
+  box-shadow:0 0 0 3px rgba(169,123,255,.14),0 10px 26px rgba(0,0,0,.35);
+  overflow-wrap:anywhere;word-break:keep-all;
+}
+.order-alert p{margin:0;font-size:14px;line-height:1.6;color:var(--ink)}
+.order-alert .order-alert-title{margin-bottom:6px;font-weight:700;color:var(--gold-2)}
+.order-alert-label{color:var(--sub);font-size:13px}
+.order-alert-close{
+  position:absolute;top:10px;right:10px;
+  width:32px;height:32px;border-radius:50%;
+  display:grid;place-items:center;
+  background:transparent;border:1px solid var(--line-soft);color:var(--sub);
+  font-size:18px;line-height:1;cursor:pointer;font-family:inherit;
+}
+.order-alert-close:hover,.order-alert-close:focus-visible{color:var(--gold-2);border-color:var(--gold)}
+/* 화면에는 안 보이고 화면 읽기 프로그램만 읽는 글자 */
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+}
+@media (max-width:640px){
+  .order-alert{padding:12px 48px 12px 14px}
+  .order-alert p{font-size:13.5px}
+}

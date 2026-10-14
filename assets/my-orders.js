@@ -38,13 +38,17 @@ function watch(uid) {
   // 같은 사람이면 이미 듣고 있는(또는 다 끝나 멈춘) 것을 그대로 둔다
   if (current && current.uid === uid) return;
   stopWatching("계정이 바뀌었습니다");
-  const sub = { uid, unsubscribe: null, stopped: false };
+  clearAlerts(); // 이전 계정의 알림을 남기지 않는다
+  // statuses — 이 구독이 마지막으로 본 주문별 status. 첫 알림에서 채운다
+  const sub = { uid, unsubscribe: null, stopped: false, statuses: null };
   current = sub;
   sub.unsubscribe = onSnapshot(myOrders(uid), snap => {
     if (sub.stopped) return;
     const changes = snap.docChanges().map(c => `${c.type} ${c.doc.id} ${c.doc.get("status")}`);
     console.log(`[주문 알림] 주문 ${snap.size}건 · 바뀐 것 ${changes.length}건${changes.length ? " — " + changes.join(", ") : ""}`);
+    const moves = statusMoves(sub, snap);
     paint(snap.docs);
+    showAlerts(moves);
     // 주문이 전부 delivered·canceled 면 더 들을 것이 없다
     if (allDone(snap.docs) && release(sub, `주문 ${snap.size}건이 모두 끝나 실시간 확인을 멈춥니다`)) {
       paintDone(sub, snap.docs);
@@ -56,6 +60,32 @@ function watch(uid) {
   });
   // 첫 알림 안에서 이미 멈췄으면 그때 없던 해제 함수를 지금 부른다 (한 번만)
   if (sub.stopped) sub.unsubscribe();
+}
+
+/* --- 상태가 바뀐 주문 찾기 --- */
+// 이전 status 와 새 status 를 실제로 견준다. 이럴 때는 알리지 않는다:
+// 첫 알림(들어올 때 있던 주문) · 새로 생긴 주문 · 지워진 주문 · status 가 같은 경우(다른 필드만 바뀜, 같은 값 다시 옴)
+// · 서버가 아직 확인하지 않은 캐시 알림(fromCache) — 이때는 값만 기억해 둔다
+function statusMoves(sub, snap) {
+  const first = sub.statuses === null;
+  if (first) sub.statuses = new Map();
+  const seen = sub.statuses;
+  const moves = [];
+  snap.docChanges().forEach(c => {
+    const id = c.doc.id;
+    if (c.type === "removed") { seen.delete(id); return; }
+    const next = String(c.doc.get("status") ?? "");
+    const had = seen.has(id);
+    const prev = seen.get(id);
+    seen.set(id, next);
+    if (first || snap.metadata.fromCache || c.type !== "modified" || !had || prev === next) return;
+    const items = c.doc.get("items");
+    moves.push({
+      id, prev, next,
+      names: (Array.isArray(items) ? items : []).map(i => i?.name ?? "").filter(Boolean).join(", ")
+    });
+  });
+  return moves;
 }
 
 // 거르기는 Firestore 가 한다 — 정렬(orderBy)은 넣지 않고 받은 뒤 화면에서 한다
@@ -200,10 +230,71 @@ function paint(docs) {
   box.replaceChildren(table);
 }
 
+/* --- 상태 변경 알림 --- */
+// 목록 바로 위, 글 흐름 안에 둔다 — 목록을 덮지 않는다. 화면 읽기 프로그램은 새로 붙은 알림만 읽는다
+const alerts = box ? document.createElement("div") : null;
+if (alerts) {
+  alerts.className = "order-alerts";
+  alerts.setAttribute("aria-live", "polite");
+  alerts.setAttribute("aria-relevant", "additions");
+  alerts.setAttribute("aria-label", "주문 상태 알림");
+  box.before(alerts);
+}
+
+const line = (label, ...parts) => {
+  const p = document.createElement("p");
+  const b = document.createElement("span");
+  b.className = "order-alert-label";
+  b.textContent = label + " ";
+  p.append(b, ...parts);
+  return p;
+};
+
+// 주문 하나에 알림 하나 — 여러 주문이 한꺼번에 바뀌어도 섞이지 않는다
+function showAlerts(moves) {
+  if (!alerts) return;
+  moves.forEach(m => {
+    const card = document.createElement("div");
+    card.className = "order-alert";
+    card.dataset.orderId = m.id;
+
+    const title = document.createElement("p");
+    title.className = "order-alert-title";
+    title.textContent = "주문 상태가 변경됐어요";
+
+    const arrow = document.createElement("span");
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = " → ";
+    const said = document.createElement("span");
+    said.className = "sr-only";
+    said.textContent = "에서 ";
+    const change = line("상태 변경", statusText(m.prev), arrow, said, statusText(m.next));
+
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "order-alert-close";
+    close.setAttribute("aria-label", `${m.names || "주문"} 알림 닫기`);
+    close.textContent = "×";
+    close.addEventListener("click", () => {
+      // 닫으면 남은 알림의 닫기 단추로 옮겨 가 키보드로 이어서 닫을 수 있게 한다
+      const next = card.nextElementSibling || card.previousElementSibling;
+      card.remove();
+      next?.querySelector(".order-alert-close")?.focus();
+    });
+
+    card.append(title, line("상품명", m.names || "상품 정보 없음"), change, close);
+    alerts.appendChild(card);
+  });
+}
+
+function clearAlerts() {
+  if (alerts) alerts.replaceChildren();
+}
+
 /* --- 로그인 상태에 맞춰 켜고 끈다 --- */
 if (box) {
   onUser(user => {
-    if (!user) { stopWatching("로그아웃했습니다"); box.replaceChildren(); return; }
+    if (!user) { stopWatching("로그아웃했습니다"); clearAlerts(); box.replaceChildren(); return; }
     watch(user.uid);
   });
   // 페이지를 떠나면 끊는다 — 다 끝나 이미 멈춘 것은 남겨 두어, 뒤로 가기로 돌아와도 다시 걸지 않는다
