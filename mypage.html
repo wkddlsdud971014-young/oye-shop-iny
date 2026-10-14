@@ -78,6 +78,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
     <p id="google-linked" hidden style="margin:0 0 12px;font-size:14px;color:var(--sub)">Google 계정 연결됨</p>
     <p id="google-link-result" role="status" style="margin:12px 0 24px;font-size:14px;color:var(--gold-2)"></p>
+    <!-- 내 주문 - assets/my-orders.js 가 채웁니다 -->
+    <h3>내 주문</h3>
+    <div id="my-orders" style="margin:0 0 32px"><p class="lead">주문을 불러오는 중입니다.</p></div>
     <button class="btn" type="button" id="mypage-logout">로그아웃</button>
   </div>
 </div></main>
@@ -86,6 +89,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script src="assets/app.js"></script>
 <script src="assets/consent.js"></script>
 <script type="module" src="assets/auth.js"></script>
+<script type="module" src="assets/my-orders.js"></script>
 <script type="module">
   import { sendEmailVerification, GoogleAuthProvider, linkWithPopup } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { auth, onUser, logout } from "./assets/auth.js";
