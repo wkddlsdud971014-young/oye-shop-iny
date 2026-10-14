@@ -3,7 +3,7 @@
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
   getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp,
-  query, where, orderBy, limit
+  query, where, orderBy, limit, startAfter
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { onUser } from "./auth.js";
@@ -36,27 +36,25 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const stockText = n => (Number(n) > 0 ? `재고 ${Number(n)}개` : "품절");
 
 /* --- 상품 목록 --- */
-async function loadList() {
-  const box = document.querySelector("#product-list");
-  if (!box) return;
-  try {
-    // 보이는 상품만, 싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
-    const q = query(
-      collection(db, "products"),
-      where("isVisible", "==", true),
-      orderBy("price", "asc"),
-      limit(3)
-    );
-    const snap = await getDocs(q);
-    countRead(snap.size);
-    if (snap.empty) {
-      box.innerHTML = '<p class="empty">등록된 상품이 없습니다.</p>';
-      return;
-    }
-    box.innerHTML = snap.docs.map(d => {
-      const p = d.data();
-      const local = findProduct(d.id);
-      return `
+const PAGE = 3;
+let lastDoc = null; // 지금 보이는 마지막 상품 문서 — 더 보기는 이 다음부터 읽는다
+
+function listQuery(after) {
+  // 보이는 상품만, 싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
+  const parts = [
+    collection(db, "products"),
+    where("isVisible", "==", true),
+    orderBy("price", "asc")
+  ];
+  if (after) parts.push(startAfter(after));
+  parts.push(limit(PAGE));
+  return query(...parts);
+}
+
+const cardHtml = d => {
+  const p = d.data();
+  const local = findProduct(d.id);
+  return `
     <a class="card" href="product.html?id=${encodeURIComponent(d.id)}">
       <div class="thumb">${local ? local.emoji : ""}</div>
       <h3>${esc(p.name)}</h3>
@@ -64,12 +62,52 @@ async function loadList() {
       <div class="price">${won(Number(p.price))}</div>
       <div class="stock${Number(p.stock) > 0 ? "" : " soldout"}">${stockText(p.stock)}</div>
     </a>`;
-    }).join("");
+};
+
+// 세 장을 다 채우지 못했으면 더 가져올 것이 없다
+function showMore(show) {
+  const slot = document.querySelector("#more-slot");
+  if (slot) slot.hidden = !show;
+}
+
+async function loadList() {
+  const box = document.querySelector("#product-list");
+  if (!box) return;
+  lastDoc = null;
+  showMore(false);
+  try {
+    const snap = await getDocs(listQuery(null));
+    countRead(snap.size);
+    if (snap.empty) {
+      box.innerHTML = '<p class="empty">등록된 상품이 없습니다.</p>';
+      return;
+    }
+    box.innerHTML = snap.docs.map(cardHtml).join("");
+    lastDoc = snap.docs[snap.docs.length - 1];
+    showMore(snap.size === PAGE);
   } catch (err) {
     countRead(0);
     box.innerHTML = '<p class="empty">목록을 불러오지 못했습니다</p>';
     // 오류 원문 전체는 Console 에만 남긴다 (색인이 없으면 만드는 주소도 여기 나온다)
     console.error(err);
+  }
+}
+
+async function loadMore(btn) {
+  const box = document.querySelector("#product-list");
+  if (!box || !lastDoc) return;
+  btn.disabled = true;
+  try {
+    const snap = await getDocs(listQuery(lastDoc));
+    countRead(snap.size);
+    box.insertAdjacentHTML("beforeend", snap.docs.map(cardHtml).join(""));
+    if (!snap.empty) lastDoc = snap.docs[snap.docs.length - 1];
+    showMore(snap.size === PAGE);
+  } catch (err) {
+    // 버튼은 그대로 두어 다시 누를 수 있게 한다
+    console.error(err);
+  } finally {
+    btn.disabled = false;
   }
 }
 
@@ -150,6 +188,8 @@ function paintSeedButton(user) {
 }
 
 await domReady;
+const moreBtn = document.querySelector("#more-btn");
+if (moreBtn) moreBtn.addEventListener("click", () => loadMore(moreBtn));
 loadList();
 loadDetail();
 onUser(paintSeedButton);

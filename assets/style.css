@@ -189,6 +189,7 @@ h2::after{content:" ✧";color:var(--violet)}
 .stock.soldout{color:#ff8a8a;font-weight:700}
 .detail .stock{margin:0 0 24px}
 .read-count{margin:28px 0 12px;font-size:13px;color:var(--sub)}
+.more{margin-top:28px;text-align:center}
 
 /* --- 단추 --- */
 .btn{
