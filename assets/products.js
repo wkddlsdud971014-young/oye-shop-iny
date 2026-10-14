@@ -36,11 +36,11 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": 
 const stockText = n => (Number(n) > 0 ? `재고 ${Number(n)}개` : "품절");
 
 /* --- 상품 목록 --- */
-const PAGE = 3;
+const PAGE = 2;
 let lastDoc = null; // 지금 보이는 마지막 상품 문서 — 더 보기는 이 다음부터 읽는다
 
 function listQuery(after) {
-  // 보이는 상품만, 싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
+  // 보이는 상품만, 싼 것부터, 두 장만 — 거르기와 자르기는 Firestore 가 한다
   const parts = [
     collection(db, "products"),
     where("isVisible", "==", true),
@@ -64,7 +64,7 @@ const cardHtml = d => {
     </a>`;
 };
 
-// 세 장을 다 채우지 못했으면 더 가져올 것이 없다
+// 두 장을 다 채우지 못했으면 더 가져올 것이 없다
 function showMore(show) {
   const slot = document.querySelector("#more-slot");
   if (slot) slot.hidden = !show;
