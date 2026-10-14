@@ -40,11 +40,11 @@ async function loadList() {
   const box = document.querySelector("#product-list");
   if (!box) return;
   try {
-    // 보이는 상품만, 싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
+    // 보이는 상품만, 비싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
     const q = query(
       collection(db, "products"),
       where("isVisible", "==", true),
-      orderBy("price", "asc"),
+      orderBy("price", "desc"),
       limit(3)
     );
     const snap = await getDocs(q);
