@@ -2,7 +2,8 @@
    그림(emoji)과 자세한 설명(detail)은 그대로 shop.js 의 것을 쓴다. */
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp
+  getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp,
+  query, where, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { onUser } from "./auth.js";
@@ -39,7 +40,14 @@ async function loadList() {
   const box = document.querySelector("#product-list");
   if (!box) return;
   try {
-    const snap = await getDocs(collection(db, "products"));
+    // 보이는 상품만, 싼 것부터, 세 장만 — 거르기와 자르기는 Firestore 가 한다
+    const q = query(
+      collection(db, "products"),
+      where("isVisible", "==", true),
+      orderBy("price", "asc"),
+      limit(3)
+    );
+    const snap = await getDocs(q);
     countRead(snap.size);
     if (snap.empty) {
       box.innerHTML = '<p class="empty">등록된 상품이 없습니다.</p>';
@@ -59,7 +67,8 @@ async function loadList() {
     }).join("");
   } catch (err) {
     countRead(0);
-    box.innerHTML = `<p class="empty">상품을 불러오지 못했습니다.<br>${esc(err.code || "")} ${esc(err.message)}</p>`;
+    box.innerHTML = '<p class="empty">목록을 불러오지 못했습니다</p>';
+    // 오류 원문 전체는 Console 에만 남긴다 (색인이 없으면 만드는 주소도 여기 나온다)
     console.error(err);
   }
 }
