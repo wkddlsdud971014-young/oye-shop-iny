@@ -184,6 +184,12 @@ h2::after{content:" ✧";color:var(--violet)}
 .detail .price{font-size:21px;font-weight:700;margin:0 0 24px;color:var(--gold-2)}
 .detail .body p{margin:0 0 15px;color:#ded4f5}
 
+/* --- 재고와 읽은 문서 수 --- */
+.stock{margin-top:8px;font-size:13px;color:var(--sub)}
+.stock.soldout{color:#ff8a8a;font-weight:700}
+.detail .stock{margin:0 0 24px}
+.read-count{margin:28px 0 12px;font-size:13px;color:var(--sub)}
+
 /* --- 단추 --- */
 .btn{
   display:inline-block;position:relative;overflow:hidden;
