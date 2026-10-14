@@ -49,6 +49,7 @@ function watch(uid) {
     const moves = statusMoves(sub, snap);
     paint(snap.docs);
     showAlerts(moves);
+    showToast(moves.length);
     // 주문이 전부 delivered·canceled 면 더 들을 것이 없다
     if (allDone(snap.docs) && release(sub, `주문 ${snap.size}건이 모두 끝나 실시간 확인을 멈춥니다`)) {
       paintDone(sub, snap.docs);
@@ -287,8 +288,45 @@ function showAlerts(moves) {
   });
 }
 
+/* --- 화면 위 초록 토스트 --- */
+// 자세한 내용은 위 알림 카드가 읽어 주므로, 토스트는 눈으로만 보는 짧은 신호다(화면 읽기 프로그램이 두 번 읽지 않게)
+const toasts = box ? document.createElement("div") : null;
+if (toasts) {
+  toasts.className = "order-toasts";
+  toasts.setAttribute("aria-hidden", "true");
+  document.body.appendChild(toasts);
+}
+const toastTimers = new Set();
+
+// 한 번에 온 변경은 토스트 하나로 묶고 몇 건인지 붙인다. 앞 토스트가 떠 있어도 새 토스트를 따로 쌓아 빠뜨리지 않는다
+function showToast(count) {
+  if (!toasts || !count) return;
+  const toast = document.createElement("div");
+  toast.className = "order-toast";
+  const text = document.createElement("span");
+  text.textContent = "주문 상태가 변경되었습니다";
+  toast.appendChild(text);
+  if (count > 1) {
+    const chip = document.createElement("span");
+    chip.className = "order-toast-count";
+    chip.textContent = `${count}건`;
+    toast.appendChild(chip);
+  }
+  toasts.appendChild(toast);
+  // 3초 뒤 저절로 사라진다
+  const timer = setTimeout(() => {
+    toastTimers.delete(timer);
+    toast.remove();
+  }, 3000);
+  toastTimers.add(timer);
+}
+
 function clearAlerts() {
   if (alerts) alerts.replaceChildren();
+  // 이전 계정의 토스트와 남은 타이머도 함께 지운다
+  toastTimers.forEach(clearTimeout);
+  toastTimers.clear();
+  if (toasts) toasts.replaceChildren();
 }
 
 /* --- 로그인 상태에 맞춰 켜고 끈다 --- */
