@@ -3,10 +3,10 @@
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
   getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp,
-  query, where, orderBy, limit, startAfter
+  query, where, orderBy, limit, startAfter, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
-import { onUser } from "./auth.js";
+import { auth, onUser } from "./auth.js";
 
 const db = getFirestore(getApp());
 
@@ -135,10 +135,74 @@ async function loadDetail() {
     price.insertAdjacentHTML("afterend", `
       <p class="sum">${esc(p.summary)}</p>
       <div class="stock${Number(p.stock) > 0 ? "" : " soldout"}">${stockText(p.stock)}</div>`);
+    paintOrderButton(box, id);
   } catch (err) {
     countRead(0);
     box.insertAdjacentHTML("afterbegin", `<p class="empty">상품 정보를 불러오지 못했습니다.<br>${esc(err.code || "")} ${esc(err.message)}</p>`);
     console.error(err);
+  }
+}
+
+/* --- 바로 주문 (상품 상세) --- */
+// 장바구니 담기 단추 옆에 붙인다. 장바구니·결제 화면과는 따로 움직인다
+function paintOrderButton(box, id) {
+  const cartBtn = box.querySelector("#add-to-cart");
+  if (!cartBtn) return;
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "btn";
+  btn.id = "order-now";
+  btn.textContent = "바로 주문";
+  const msg = document.createElement("p");
+  msg.className = "lead";
+  msg.setAttribute("role", "status");
+  btn.addEventListener("click", () => orderNow(id, btn, msg, box));
+  cartBtn.after(" ", btn, msg);
+}
+
+async function orderNow(id, btn, msg, box) {
+  btn.disabled = true;
+  msg.textContent = "주문하는 중…";
+  try {
+    // 로그인 상태 확인이 끝날 때까지 기다린 뒤 본다
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    if (!user) { msg.textContent = "로그인이 필요합니다"; return; }
+
+    const productRef = doc(db, "products", id);
+    const orderRef = doc(collection(db, "orders")); // 자동 ID
+    // 재고 확인 · 주문 쓰기 · 재고 차감을 한 번에 — 하나라도 실패하면 아무것도 바뀌지 않는다
+    const result = await runTransaction(db, async tx => {
+      const snap = await tx.get(productRef);
+      countRead(1);
+      if (!snap.exists()) throw new Error("Firestore 에 이 상품 문서가 없습니다.");
+      const p = snap.data();
+      if (!(Number(p.stock) >= 1)) return { soldOut: true };
+      const quantity = 1;
+      tx.set(orderRef, {
+        userId: user.uid,
+        items: [{ productId: id, name: p.name, price: p.price, quantity }],
+        totalPrice: p.price * quantity,
+        status: "paid",
+        createdAt: serverTimestamp()
+      });
+      tx.update(productRef, { stock: p.stock - 1 });
+      return { soldOut: false, stock: p.stock - 1 };
+    });
+
+    if (result.soldOut) { msg.textContent = "재고가 없습니다"; return; }
+    msg.textContent = `주문했습니다. 주문 번호 ${orderRef.id}`;
+    const stock = box.querySelector(".stock");
+    if (stock) {
+      stock.textContent = stockText(result.stock);
+      stock.classList.toggle("soldout", !(result.stock > 0));
+    }
+  } catch (err) {
+    // 오류 글은 줄이지 않고 그대로 보여 준다
+    msg.textContent = `주문하지 못했습니다. ${err.code || ""} ${err.message}`;
+    console.error(err);
+  } finally {
+    btn.disabled = false;
   }
 }
 
