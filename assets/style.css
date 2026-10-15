@@ -184,6 +184,10 @@ h2::after{content:" ✧";color:var(--violet)}
   box-shadow:0 12px 34px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.06);
   animation:float 4.6s ease-in-out infinite;
 }
+/* 사진이 있는 상세 — 그림 칸을 넓히고, 사진은 자르지 않고 통째로 보인다 */
+.detail.has-photo{grid-template-columns:minmax(0,380px) 1fr}
+.detail .thumb.has-photo{padding:12px;line-height:0}
+.detail .thumb.has-photo img{width:100%;height:auto;object-fit:contain;border-radius:14px;display:block}
 .detail h1{font-family:"Gowun Batang",serif;margin:0 0 10px;font-size:28px;color:#fff}
 .detail .price{font-size:21px;font-weight:700;margin:0 0 24px;color:var(--gold-2)}
 .detail .body p{margin:0 0 15px;color:#ded4f5}
@@ -274,6 +278,7 @@ footer.site .wrap::before{content:"🌙 ";}
 @media (max-width:640px){
   .detail{grid-template-columns:1fr}
   .detail .thumb{font-size:76px;padding:28px 0}
+  .detail.has-photo{grid-template-columns:1fr}
   .hero{padding:52px 0 40px}
   .hero h1{font-size:32px}
   .hero p{font-size:15px}

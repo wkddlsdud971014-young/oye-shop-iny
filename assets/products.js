@@ -70,20 +70,31 @@ const cardHtml = d => {
 
 // imagePath 경로로 다운로드 URL 을 받아 그림 글자 자리에 사진을 넣는다
 // 문서를 읽는 것이 아니므로 읽은 문서 수에 더하지 않는다. 못 받으면 그림 글자를 그대로 둔다
+async function putPhoto(thumb, path, alt = "") {
+  try {
+    const url = await getDownloadURL(ref(storage, path));
+    const img = document.createElement("img");
+    img.alt = alt;
+    // 사진 파일을 받지 못하면 그림 글자를 그대로 둔다
+    await new Promise((ok, fail) => {
+      img.onload = ok;
+      img.onerror = () => fail(new Error("사진을 불러오지 못했습니다: " + path));
+      img.src = url;
+    });
+    thumb.replaceChildren(img);
+    thumb.classList.add("has-photo");
+    return true;
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
+
 function paintPhotos(box) {
-  box.querySelectorAll(".thumb[data-image-path]").forEach(async thumb => {
+  box.querySelectorAll(".thumb[data-image-path]").forEach(thumb => {
     const path = thumb.dataset.imagePath;
     thumb.removeAttribute("data-image-path");
-    try {
-      const url = await getDownloadURL(ref(storage, path));
-      const img = document.createElement("img");
-      img.src = url;
-      img.alt = "";
-      thumb.replaceChildren(img);
-      thumb.classList.add("has-photo");
-    } catch (err) {
-      console.error(err);
-    }
+    putPhoto(thumb, path);
   });
 }
 
@@ -161,6 +172,11 @@ async function loadDetail() {
       <p class="sum">${esc(p.summary)}</p>
       <div class="stock${Number(p.stock) > 0 ? "" : " soldout"}">${stockText(p.stock)}</div>`);
     paintOrderButton(box, id);
+    // imagePath 가 있으면 그림 글자 자리를 사진으로 바꾼다 — 목록과 같은 방식
+    const thumb = box.querySelector(".thumb");
+    if (thumb && typeof p.imagePath === "string" && p.imagePath) {
+      if (await putPhoto(thumb, p.imagePath, p.name)) box.classList.add("has-photo");
+    }
   } catch (err) {
     countRead(0);
     box.insertAdjacentHTML("afterbegin", `<p class="empty">상품 정보를 불러오지 못했습니다.<br>${esc(err.code || "")} ${esc(err.message)}</p>`);
