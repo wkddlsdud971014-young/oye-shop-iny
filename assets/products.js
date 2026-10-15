@@ -80,6 +80,7 @@ function paintPhotos(box) {
       img.src = url;
       img.alt = "";
       thumb.replaceChildren(img);
+      thumb.classList.add("has-photo");
     } catch (err) {
       console.error(err);
     }
