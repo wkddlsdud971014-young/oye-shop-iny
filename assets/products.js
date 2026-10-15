@@ -5,10 +5,12 @@ import {
   getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp,
   query, where, orderBy, limit, startAfter, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { auth, onUser } from "./auth.js";
 
 const db = getFirestore(getApp());
+const storage = getStorage(getApp());
 
 // 상품 올리기로 등록할 다섯 장 — p1 은 넣지 않는다
 const SEED = {
@@ -54,15 +56,35 @@ function listQuery(after) {
 const cardHtml = d => {
   const p = d.data();
   const local = findProduct(d.id);
+  // imagePath 가 있으면 표시만 해 두고, 사진은 그린 뒤에 paintPhotos 가 바꿔 넣는다
+  const photo = typeof p.imagePath === "string" && p.imagePath ? ` data-image-path="${esc(p.imagePath)}"` : "";
   return `
     <a class="card" href="product.html?id=${encodeURIComponent(d.id)}">
-      <div class="thumb">${local ? local.emoji : ""}</div>
+      <div class="thumb"${photo}>${local ? local.emoji : ""}</div>
       <h3>${esc(p.name)}</h3>
       <p class="sum">${esc(p.summary)}</p>
       <div class="price">${won(Number(p.price))}</div>
       <div class="stock${Number(p.stock) > 0 ? "" : " soldout"}">${stockText(p.stock)}</div>
     </a>`;
 };
+
+// imagePath 경로로 다운로드 URL 을 받아 그림 글자 자리에 사진을 넣는다
+// 문서를 읽는 것이 아니므로 읽은 문서 수에 더하지 않는다. 못 받으면 그림 글자를 그대로 둔다
+function paintPhotos(box) {
+  box.querySelectorAll(".thumb[data-image-path]").forEach(async thumb => {
+    const path = thumb.dataset.imagePath;
+    thumb.removeAttribute("data-image-path");
+    try {
+      const url = await getDownloadURL(ref(storage, path));
+      const img = document.createElement("img");
+      img.src = url;
+      img.alt = "";
+      thumb.replaceChildren(img);
+    } catch (err) {
+      console.error(err);
+    }
+  });
+}
 
 // 세 장을 다 채우지 못했으면 더 가져올 것이 없다
 function showMore(show) {
@@ -83,6 +105,7 @@ async function loadList() {
       return;
     }
     box.innerHTML = snap.docs.map(cardHtml).join("");
+    paintPhotos(box);
     lastDoc = snap.docs[snap.docs.length - 1];
     showMore(snap.size === PAGE);
   } catch (err) {
@@ -101,6 +124,7 @@ async function loadMore(btn) {
     const snap = await getDocs(listQuery(lastDoc));
     countRead(snap.size);
     box.insertAdjacentHTML("beforeend", snap.docs.map(cardHtml).join(""));
+    paintPhotos(box);
     if (!snap.empty) lastDoc = snap.docs[snap.docs.length - 1];
     showMore(snap.size === PAGE);
   } catch (err) {
