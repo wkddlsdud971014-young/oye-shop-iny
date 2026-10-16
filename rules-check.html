@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>규칙 확인 — 오예상점</title>
+<meta name="description" content="보안 규칙이 무엇을 허용하는지 단추를 눌러 확인합니다">
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/style.css">
+
+<!-- 동의 기본값 — 태그 관리자보다 먼저 둡니다 -->
+<script>
+// 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
+window.dataLayer = window.dataLayer || [];
+// 동의 신호를 통로에 넣는 창구
+function gtag(){dataLayer.push(arguments);}
+// 네 신호의 기본값 — 아직 아무것도 고르지 않은 손님은 전부 denied
+gtag('consent','default',{
+  'ad_storage':'denied',
+  'analytics_storage':'denied',
+  'ad_user_data':'denied',
+  'ad_personalization':'denied'
+});
+// 앞 화면에서 수락을 고른 손님이면 그 값을 되살린다
+try{ if(localStorage.getItem('oye_consent')==='granted'){
+  gtag('consent','update',{
+    'ad_storage':'granted',
+    'analytics_storage':'granted',
+    'ad_user_data':'granted',
+    'ad_personalization':'granted'
+  });
+} }catch(e){}
+</script>
+<!-- End 동의 기본값 -->
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-WDM6H3L4');</script>
+<!-- End Google Tag Manager -->
+
+</head>
+<body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WDM6H3L4"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
+<header class="site"><div class="wrap">
+  <a class="brand" href="index.html">오예상점</a>
+  <nav class="site">
+    <a href="index.html">상품</a>
+    <a href="about.html">가게 소개</a>
+    <a href="shipping.html">배송·교환</a>
+    <a href="cart.html">장바구니<span class="cart-count">0</span></a>
+  </nav>
+</div></header>
+
+<main><div class="wrap">
+  <h2>규칙 확인</h2>
+  <!-- 로그인했는지 확인이 끝나기 전에는 아래 내용을 숨겨 둡니다 -->
+  <p class="lead" id="check-wait">확인하고 있습니다…</p>
+  <p class="lead" id="check-login" hidden>로그인한 뒤에 쓸 수 있습니다. 먼저 로그인해 주세요.</p>
+  <div id="check-body" hidden>
+    <p class="lead">로그인한 이메일 <strong id="check-email" data-clarity-mask="true"></strong></p>
+    <p class="lead">UID <strong id="check-uid" data-clarity-mask="true" style="word-break:break-all"></strong></p>
+
+    <h3>주문 전체 읽기</h3>
+    <button class="btn" type="button" id="btn-read-all">주문 전체 읽기</button>
+    <div id="result-read-all" role="status" style="margin:12px 0 32px;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
+
+    <h3>내 주문 금액 고치기</h3>
+    <button class="btn" type="button" id="btn-my-price">내 주문 금액 고치기</button>
+    <div id="result-my-price" role="status" style="margin:12px 0 32px;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
+
+    <h3>상품 가격 0원으로</h3>
+    <button class="btn" type="button" id="btn-product-zero">상품 가격 0원으로</button>
+    <div id="result-product-zero" role="status" style="margin:12px 0 32px;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
+  </div>
+</div></main>
+<footer class="site"><div class="wrap"></div></footer>
+<script src="assets/shop.js"></script>
+<script src="assets/app.js"></script>
+<script src="assets/consent.js"></script>
+<script type="module" src="assets/auth.js"></script>
+<script type="module">
+  import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import {
+    getFirestore, collection, query, where, limit, getDocs, doc, updateDoc
+  } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
+  import { auth, onUser } from "./assets/auth.js";
+
+  const db = getFirestore(getApp());
+
+  const wait = document.querySelector("#check-wait");
+  const loginNote = document.querySelector("#check-login");
+  const body = document.querySelector("#check-body");
+
+  // 오류 글은 줄이지 않고 그대로 보여 준다
+  const errorLine = (head, err) => `${head}\n${err && err.code ? err.code : ""}\n${err && err.message ? err.message : String(err)}`;
+
+  // 단추 하나를 눌렀을 때 — 실패해도 이 단추의 결과 칸에만 쓰고, 다른 단추는 그대로 둔다
+  function wire(btnId, boxId, run) {
+    const btn = document.querySelector(btnId);
+    const box = document.querySelector(boxId);
+    btn.addEventListener("click", async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) { box.textContent = "로그인한 뒤에 쓸 수 있습니다."; return; }
+      btn.disabled = true;
+      box.textContent = "확인하는 중…";
+      try {
+        await run(uid, box);
+      } catch (err) {
+        console.error(err);
+        box.textContent = errorLine("실패했습니다.", err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  /* --- 1. 주문 전체 읽기 — 조건 없이 orders 를 한 번 읽는다 --- */
+  wire("#btn-read-all", "#result-read-all", async (uid, box) => {
+    const snap = await getDocs(collection(db, "orders"));
+    const others = snap.docs.filter(d => d.get("userId") !== uid).length;
+
+    const summary = document.createElement("p");
+    summary.style.margin = "0 0 12px";
+    summary.textContent = `성공했습니다. 전체 주문 ${snap.size}건 · 내 UID 가 아닌 주문 ${others}건`;
+
+    const table = document.createElement("table");
+    table.className = "cart";
+    table.innerHTML = "<thead><tr><th>문서 ID</th><th>userId</th><th>totalPrice</th></tr></thead>";
+    const tbody = document.createElement("tbody");
+    snap.docs.forEach(d => {
+      const tr = document.createElement("tr");
+      [d.id, String(d.get("userId") ?? ""), String(d.get("totalPrice") ?? "")].forEach(text => {
+        const td = document.createElement("td");
+        td.textContent = text;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    box.replaceChildren(summary, table);
+  });
+
+  /* --- 2. 내 주문 금액 고치기 — 내 주문 하나의 totalPrice 만 1 로 --- */
+  wire("#btn-my-price", "#result-my-price", async (uid, box) => {
+    const snap = await getDocs(query(collection(db, "orders"), where("userId", "==", uid), limit(1)));
+    if (snap.empty) { box.textContent = "내 UID 로 된 주문이 없습니다. 바꾼 문서가 없습니다."; return; }
+    const id = snap.docs[0].id;
+    await updateDoc(doc(db, "orders", id), { totalPrice: 1 });
+    box.textContent = `성공했습니다. orders/${id} 의 totalPrice 를 1 로 바꿨습니다.`;
+  });
+
+  /* --- 3. 상품 가격 0원으로 — products/p1 의 price 만 0 으로 --- */
+  wire("#btn-product-zero", "#result-product-zero", async (uid, box) => {
+    await updateDoc(doc(db, "products", "p1"), { price: 0 });
+    box.textContent = "성공했습니다. products/p1 의 price 를 0 으로 바꿨습니다.";
+  });
+
+  onUser(user => {
+    wait.hidden = true;
+    loginNote.hidden = !!user;
+    body.hidden = !user;
+    document.querySelector("#check-email").textContent = user ? (user.email ?? "") : "";
+    document.querySelector("#check-uid").textContent = user ? user.uid : "";
+  });
+</script>
+</body>
+</html>
