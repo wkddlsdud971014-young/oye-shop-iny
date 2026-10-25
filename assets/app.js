@@ -207,52 +207,25 @@ function paintCheckout() {
   form.addEventListener("submit", e => {
     e.preventDefault();
 
-    // ▼ 여기에 「결제를 마쳤다」(purchase)를 알리는 코드가 들어갑니다 (뒤 수업에서)
-    //   결제 화면에서 「결제하기」로 주문서를 제출한 직후, 장바구니를 비우기 직전입니다.
-    //   바로 아래에서 장바구니를 비우므로 산 상품과 금액은 여기서 읽어야 합니다.
-    // 주문 번호를 새로 만든다 - 시각과 임의의 글자를 이어 붙인다
-    const orderId = "ORD-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
-    // 산 상품 목록을 장바구니에서 읽어 온다 - 바로 아래에서 비우므로 여기서 읽는다
+    // 「결제를 마쳤다」(purchase)는 주문 완료 화면(done.js)에서 주문을 저장한 뒤 보낸다
+    // 결제할 상품 목록을 장바구니에서 읽어 온다 - 상품 목록에 없는 상품은 뺀다
     const bought = Cart.read().filter(i => findProduct(i.id));
-    // 산 상품 합계 - 상품 가격 × 수량의 합이고 배송비는 넣지 않는다
+    // 결제할 상품 합계 - 상품 가격 × 수량의 합이고 배송비는 넣지 않는다
     const boughtTotal = Cart.total();
-    // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
-    window.dataLayer = window.dataLayer || [];
-    // 앞에서 넣은 상품 값이 섞이지 않게 먼저 비운다
-    dataLayer.push({ ecommerce: null });
-    // 통로 끝에 한 덩어리를 넣는다 - 넣는 순간이 태그 관리자가 듣는 순간
-    dataLayer.push({
-      // 무슨 일이 일어났나 - 계획서 이름 글자 그대로
-      event: "purchase",
-      // 같이 보내는 상품 값 묶음
-      ecommerce: {
-        // 이 주문을 가려내는 번호
-        transaction_id: orderId,
-        // 어느 나라 돈인가
-        currency: "KRW",
-        // 금액 - 산 상품 합계
-        value: boughtTotal,
-        // 산 상품마다 상자 하나씩 목록에 넣는다
-        items: bought.map(i => {
-          const p = findProduct(i.id);
-          return { item_id: p.id, item_name: p.name, price: p.price, quantity: i.qty };
-        })
-      }
-    });
 
     // 포트원 결제 번호 - OYE- 뒤에 시각과 임의의 글자를 이어 붙여 결제마다 다르게 만든다
     const paymentId = "OYE-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
     // 주문 이름 - 첫 상품 이름, 종류가 더 있으면 뒤에 「외 N건」
     const first = bought.length ? findProduct(bought[0].id).name : "";
     const orderName = bought.length > 1 ? `${first} 외 ${bought.length - 1}건` : first;
-    // 결제창이 돌려준 글자를 그대로 보여 주는 칸
+    // 결제창이 결과를 못 돌려주고 오류를 던졌을 때 그 글자를 그대로 보여 주는 칸
     const result = document.querySelector("#pay-result");
     const show = text => {
       result.textContent = "paymentId: " + paymentId + "\n" + text;
       result.hidden = false;
     };
 
-    // 포트원 결제창(테스트)을 연다 - 장바구니는 비우지 않고 이 화면에 머문다
+    // 포트원 결제창(테스트)을 연다 - 결과는 주문 완료 화면 한 곳에서 처리한다
     PortOne.requestPayment({
       storeId: "store-cdba0757-de00-419f-a55e-6ade92d38944",
       channelKey: "channel-key-c913af88-4b2e-4349-b1c9-a5a47a56dba4",
@@ -260,9 +233,22 @@ function paintCheckout() {
       orderName,
       totalAmount: boughtTotal,
       currency: "CURRENCY_KRW",
-      payMethod: "CARD"
+      payMethod: "CARD",
+      // 장바구니의 상품 ID와 수량만 싣는다 - 금액은 싣지 않는다
+      customData: { items: bought.map(i => ({ id: i.id, qty: i.qty })) },
+      // 휴대폰은 결제를 마치면 이 주소로 넘어온다 - 포트원이 paymentId·code·message 를 붙여 준다
+      redirectUrl: "https://oye-iny-shop.vercel.app/done.html"
     })
-      .then(response => show(JSON.stringify(response, null, 2)))
+      .then(response => {
+        // 휴대폰처럼 다른 주소로 넘어가는 경우에는 돌려받는 값이 없다
+        if (!response) return;
+        // PC 는 돌려받은 값을 휴대폰과 같은 모양으로 주문 완료 화면 주소 뒤에 붙인다
+        const params = new URLSearchParams();
+        ["paymentId", "code", "message"].forEach(key => {
+          if (response[key] != null) params.set(key, response[key]);
+        });
+        location.href = "done.html?" + params.toString();
+      })
       .catch(error => show(String(error)));
   });
 }
