@@ -87,6 +87,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <h3>가격 바꿔 보내기</h3>
     <button class="btn" type="button" id="btn-fake-price">가격 바꿔 보내기</button>
     <div id="result-fake-price" role="status" style="margin:12px 0 32px;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
+
+    <h3>수량 0으로 묻기</h3>
+    <button class="btn" type="button" id="btn-zero-qty">수량 0으로 묻기</button>
+    <div id="result-zero-qty" role="status" style="margin:12px 0 32px;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
   </div>
 </div></main>
 <footer class="site"><div class="wrap"></div></footer>
@@ -185,6 +189,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   wire("#btn-fake-price", "#result-fake-price", async (uid, box) => {
     const result = await calcOrderTotal({ productId: "p1", quantity: 2, price: 100 });
     box.textContent = `성공했습니다. 보낸 price 100 · 서버가 돌려준 totalPrice ${result.data.totalPrice}`;
+  });
+
+  /* --- 6. 수량 0으로 묻기 — quantity 0 을 보내면 서버가 거절하는지 본다 --- */
+  wire("#btn-zero-qty", "#result-zero-qty", async (uid, box) => {
+    const result = await calcOrderTotal({ productId: "p1", quantity: 0 });
+    box.textContent = `성공했습니다. totalPrice ${result.data.totalPrice}`;
   });
 
   onUser(user => {
