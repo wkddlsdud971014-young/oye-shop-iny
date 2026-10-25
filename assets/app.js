@@ -240,8 +240,30 @@ function paintCheckout() {
       }
     });
 
-    Cart.clear();
-    location.href = "done.html";
+    // 포트원 결제 번호 - OYE- 뒤에 시각과 임의의 글자를 이어 붙여 결제마다 다르게 만든다
+    const paymentId = "OYE-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    // 주문 이름 - 첫 상품 이름, 종류가 더 있으면 뒤에 「외 N건」
+    const first = bought.length ? findProduct(bought[0].id).name : "";
+    const orderName = bought.length > 1 ? `${first} 외 ${bought.length - 1}건` : first;
+    // 결제창이 돌려준 글자를 그대로 보여 주는 칸
+    const result = document.querySelector("#pay-result");
+    const show = text => {
+      result.textContent = "paymentId: " + paymentId + "\n" + text;
+      result.hidden = false;
+    };
+
+    // 포트원 결제창(테스트)을 연다 - 장바구니는 비우지 않고 이 화면에 머문다
+    PortOne.requestPayment({
+      storeId: "store-cdba0757-de00-419f-a55e-6ade92d38944",
+      channelKey: "channel-key-c913af88-4b2e-4349-b1c9-a5a47a56dba4",
+      paymentId,
+      orderName,
+      totalAmount: boughtTotal,
+      currency: "CURRENCY_KRW",
+      payMethod: "CARD"
+    })
+      .then(response => show(JSON.stringify(response, null, 2)))
+      .catch(error => show(String(error)));
   });
 }
 
