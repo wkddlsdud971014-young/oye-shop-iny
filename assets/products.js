@@ -8,6 +8,7 @@ import {
 import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { auth, onUser } from "./auth.js";
+import { showNotifyCard } from "./notify-card.js";
 
 const db = getFirestore(getApp());
 const storage = getStorage(getApp());
@@ -233,6 +234,8 @@ async function orderNow(id, btn, msg, box) {
 
     if (result.soldOut) { msg.textContent = "재고가 없습니다"; return; }
     msg.textContent = `주문했습니다. 주문 번호 ${orderRef.id}`;
+    // 주문이 저장된 뒤에만 배송 알림을 묻는다
+    showNotifyCard(msg, orderRef.id);
     const stock = box.querySelector(".stock");
     if (stock) {
       stock.textContent = stockText(result.stock);

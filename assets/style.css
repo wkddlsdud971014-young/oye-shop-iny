@@ -304,6 +304,15 @@ footer.site .wrap::before{content:"🌙 ";}
   .auth-email{display:none}
 }
 
+/* --- 배송 출발 알림 카드 (주문 완료 · 바로 주문 직후) --- */
+.notify-card{
+  margin:0 0 24px;padding:20px 22px;max-width:520px;
+  background:var(--card);border:1px solid var(--line);border-radius:16px;
+}
+.notify-card h3{margin:0 0 8px;font-size:16.5px;font-family:"Gowun Batang",serif;color:#fff}
+.notify-card p{margin:0;color:var(--sub);font-size:14px;line-height:1.65}
+.notify-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+
 /* --- 내 주문 상태와 진행 단계 (마이페이지) --- */
 table.cart tr.order-main td{border-bottom:0}
 table.cart td.order-steps-cell{padding-top:2px}

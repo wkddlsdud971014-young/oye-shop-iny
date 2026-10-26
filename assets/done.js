@@ -6,6 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
 import { auth } from "./auth.js";
+import { showNotifyCard } from "./notify-card.js";
 
 const db = getFirestore(getApp());
 
@@ -77,6 +78,8 @@ async function saveOrder(paymentId) {
   if (badge) badge.textContent = Cart.count();
   say("주문이 접수되었습니다", "결제 ID: " + paymentId);
   prose.hidden = false;
+  // 주문이 저장된 뒤에만 배송 알림을 묻는다
+  showNotifyCard(prose, paymentId);
 
   // 통로가 이미 있으면 그대로 쓰고, 없을 때만 새로 만든다
   window.dataLayer = window.dataLayer || [];
