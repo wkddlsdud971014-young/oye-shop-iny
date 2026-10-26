@@ -53,6 +53,8 @@ function paint(card, permission) {
     const result = await Notification.requestPermission();
     console.log("[알림 권한] 요청 결과:", result);
     paint(card, result);
+    // 허락받은 바로 그때 토큰을 확인한다
+    if (result === "granted") import("./push-token.js").then(m => m.syncPushToken());
   });
 
   // 나중에 — 이번 주문에서만 숨긴다. 다음 주문에서는 다시 묻는다

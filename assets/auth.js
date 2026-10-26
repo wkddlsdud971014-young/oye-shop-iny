@@ -18,11 +18,12 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
 /* --- 웹 푸시 서비스 워커 --- */
-// 등록만 한다. 알림 권한 요청과 토큰 발급은 여기서 하지 않는다
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/firebase-messaging-sw.js")
-    .catch(err => console.warn("서비스 워커 등록 실패:", err));
-}
+// 등록만 한다. 알림 권한 요청은 여기서 하지 않는다
+// 토큰은 push-token.js 가 이 등록이 끝난 뒤에 받는다. 못 쓰거나 실패하면 null
+export const swReady = "serviceWorker" in navigator
+  ? navigator.serviceWorker.register("/firebase-messaging-sw.js")
+      .catch(err => { console.warn("서비스 워커 등록 실패:", err); return null; })
+  : Promise.resolve(null);
 
 /* --- 로그인 상태를 기다리는 화면들 --- */
 let known = false;
@@ -93,4 +94,8 @@ onAuthStateChanged(auth, user => {
   current = user;
   paintHeader(user);
   waiting.forEach(cb => cb(user));
+  // 로그인했고 알림을 이미 허락한 손님만 토큰을 확인한다 — 그 밖에는 메시징 SDK 를 불러오지도 않는다
+  if (user && "Notification" in window && Notification.permission === "granted") {
+    import("./push-token.js").then(m => m.syncPushToken());
+  }
 });
