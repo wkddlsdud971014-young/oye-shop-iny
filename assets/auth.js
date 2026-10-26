@@ -17,6 +17,13 @@ const firebaseConfig = {
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
+/* --- 웹 푸시 서비스 워커 --- */
+// 등록만 한다. 알림 권한 요청과 토큰 발급은 여기서 하지 않는다
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .catch(err => console.warn("서비스 워커 등록 실패:", err));
+}
+
 /* --- 로그인 상태를 기다리는 화면들 --- */
 let known = false;
 let current = null;
