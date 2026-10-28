@@ -11,7 +11,7 @@ import {
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 // 2. 어느 규칙 판으로 돌릴지 고르는 한 줄
-const RULES = "firestore.rules";
+const RULES = "firestore.open.rules";
 
 let testEnv;
 
@@ -50,6 +50,8 @@ test("오예상점은 로그인하지 않아도 상품 p1을 볼 수 있다", as
 test("손님이 남의 주문을 읽는다", async () => {
   const 사람 = testEnv.authenticatedContext("cust01");
   await assertFails(getDoc(doc(사람.firestore(), "orders/o1")));
+
+
 });
 
 
