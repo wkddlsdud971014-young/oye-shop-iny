@@ -19,6 +19,8 @@
   .pa-field input{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px}
   .pa-msg{margin:8px 0 0;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all}
   .pa-msg:empty{display:none}
+  .pa-thumb{display:block;width:48px;height:48px;object-fit:cover;border-radius:8px}
+  .pa-nophoto{font-size:12px;color:var(--sub)}
   #pa-new{margin-top:16px}
 </style>
 
@@ -98,6 +100,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <input id="pa-summary" name="summary">
       <label for="pa-stock">stock</label>
       <input id="pa-stock" name="stock" inputmode="numeric" placeholder="0 이상의 정수" required>
+      <label for="pa-photo">사진 (고르지 않아도 됩니다)</label>
+      <input id="pa-photo" name="photo" type="file" accept="image/*">
       <button class="btn" type="submit" name="save">만들기</button>
       <button class="btn ghost" type="reset">취소</button>
       <p class="pa-msg" id="pa-new-msg" role="status"></p>
@@ -105,7 +109,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p class="pa-msg" id="pa-status" role="status"></p>
     <div class="pa-scroll">
       <table class="cart pa-table">
-        <thead><tr><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th></tr></thead>
+        <thead><tr><th>사진</th><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th></tr></thead>
         <tbody id="pa-body"></tbody>
       </table>
     </div>
