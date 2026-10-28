@@ -5,7 +5,7 @@
 import "./auth.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp
+  getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
@@ -26,6 +26,11 @@ const products = new Map();
 const rows = new Map();
 // 문서 ID → 이 화면에서 사진을 덮어 올린 시각. 같은 주소의 옛 사진이 브라우저에 남아 있지 않게 한다
 const freshPhoto = new Map();
+
+// 관리 화면에서 문서를 쓸 때마다 같이 적는다 — 값은 서버 시각. 손님 주문(products.js)은 이 값을 건드리지 않는다
+const stamp = () => ({ updatedAt: serverTimestamp() });
+// 서버 시각은 다시 읽기 전에는 모르므로, 화면 정렬에만 이 컴퓨터 시각을 어림값으로 넣어 둔다 (문서에는 쓰지 않는다)
+const stampLocal = () => ({ updatedAt: Timestamp.now() });
 
 // 오류 글은 줄이지 않고 그대로 보여 준다 — admin.html 과 같은 모양
 const errorLine = (head, err) => `${head}\n${err && err.code ? err.code : ""}\n${err && err.message ? err.message : String(err)}`;
@@ -141,8 +146,9 @@ function paint(id, note = "") {
         head = `사진은 올라갔지만 문서를 저장하지 못했습니다. (${id})`;
         patch = { ...patch, imagePath: path };
       }
-      await updateDoc(doc(db, "products", id), patch);
-      Object.assign(products.get(id), patch);
+      // 품절 · 노출 토글, 고치기, 사진 교체가 모두 여기서 저장된다 — 저장이 끝까지 된 때만 updatedAt 이 바뀐다
+      await updateDoc(doc(db, "products", id), { ...patch, ...stamp() });
+      Object.assign(products.get(id), patch, stampLocal());
       paint(id, okText);
       return true;
     } catch (err) {
@@ -250,7 +256,13 @@ const SORTS = {
     const sb = Number.isFinite(Number(b[1].stock)) ? Number(b[1].stock) : Infinity;
     return sa - sb || byName(a, b);
   },
-  name: byName
+  name: byName,
+  // 최근에 고친 순 — updatedAt 이 늦은 것이 위, 없으면 맨 아래, 같으면 이름순
+  updated: (a, b) => {
+    const ta = a[1].updatedAt instanceof Timestamp ? a[1].updatedAt.toMillis() : -Infinity;
+    const tb = b[1].updatedAt instanceof Timestamp ? b[1].updatedAt.toMillis() : -Infinity;
+    return (tb === ta ? 0 : tb > ta ? 1 : -1) || byName(a, b);
+  }
 };
 
 function applyView() {
@@ -337,9 +349,9 @@ newForm.addEventListener("submit", async e => {
   let head = "새 상품을 만들지 못했습니다.";
   try {
     // 1) 자동 문서 ID · 처음에는 숨김 · 만든 시각은 서버 시각
-    const created = await addDoc(collection(db, "products"), { ...data, createdAt: serverTimestamp() });
+    const created = await addDoc(collection(db, "products"), { ...data, createdAt: serverTimestamp(), ...stamp() });
     id = created.id;
-    products.set(id, data);
+    products.set(id, { ...data, ...stampLocal() });
     paint(id, "새로 만들었습니다. 가게에는 아직 안 보입니다. isVisible false");
     if (file) {
       // 2) 그 문서 ID 로 사진을 올린다
@@ -347,8 +359,8 @@ newForm.addEventListener("submit", async e => {
       const path = await uploadPhoto(id, file, text => { newMsg.textContent = text; });
       // 3) 다 올라간 뒤에 imagePath 를 저장한다
       head = `새 상품 ${id} 의 사진은 올라갔지만 imagePath 를 저장하지 못했습니다. 표의 「고치기」 에서 다시 올릴 수 있습니다.`;
-      await updateDoc(doc(db, "products", id), { imagePath: path });
-      products.get(id).imagePath = path;
+      await updateDoc(doc(db, "products", id), { imagePath: path, ...stamp() });
+      Object.assign(products.get(id), { imagePath: path }, stampLocal());
       paint(id, `새로 만들었습니다. 가게에는 아직 안 보입니다. isVisible false · imagePath ${path}`);
     }
     newForm.reset();
