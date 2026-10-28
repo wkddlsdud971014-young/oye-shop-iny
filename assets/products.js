@@ -28,6 +28,9 @@ const domReady = new Promise(r => {
 
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const stockText = n => (Number(n) > 0 ? `재고 ${Number(n)}개` : "품절");
+// 상세 설명(description) — 빈 줄로 문단을 나누고, 문단 안의 줄바꿈은 <br> 로 남긴다. 글자는 esc 로 막아 HTML 로 실행되지 않는다
+const descriptionHtml = text => String(text).replace(/\r\n?/g, "\n").trim().split(/\n\s*\n/)
+  .map(t => `<p>${esc(t.trim()).replace(/\n/g, "<br>")}</p>`).join("");
 
 /* --- 상품 목록 --- */
 const PAGE = 3;
@@ -171,6 +174,16 @@ async function loadDetail() {
     price.insertAdjacentHTML("afterend", `
       <p class="sum">${esc(p.summary)}</p>
       <div class="stock${Number(p.stock) > 0 ? "" : " soldout"}">${stockText(p.stock)}</div>`);
+    // description 이 있으면 상세 설명으로 쓴다. 없으면 app.js 가 shop.js 의 detail 로 그린 설명을 그대로 둔다
+    if (typeof p.description === "string" && p.description.trim()) {
+      let prose = box.querySelector(".body.prose");
+      if (!prose) {
+        prose = document.createElement("div");
+        prose.className = "body prose";
+        h1.parentElement.append(prose);
+      }
+      prose.innerHTML = descriptionHtml(p.description);
+    }
     paintOrderButton(box, id);
     // imagePath 가 있으면 그림 글자 자리를 사진으로 바꾼다 — 목록과 같은 방식
     const thumb = box.querySelector(".thumb");

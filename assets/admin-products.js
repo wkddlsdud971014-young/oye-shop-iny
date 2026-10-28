@@ -52,6 +52,10 @@ function toggle(checked, text) {
   const input = make("input", { type: "checkbox", checked });
   return { input, label: make("label", { className: "pa-toggle" }, input, " ", text) };
 }
+function area(labelText, value) {
+  const input = make("textarea", { value: value ?? "", rows: 8 });
+  return { input, label: make("label", { className: "pa-field pa-wide" }, labelText, input) };
+}
 function photoField() {
   const input = make("input", { type: "file", accept: "image/*" });
   return { input, label: make("label", { className: "pa-field" }, "사진", input) };
@@ -181,15 +185,16 @@ function paint(id, note = "") {
     }
   });
 
-  // 고치기 → price · summary · stock · 사진
+  // 고치기 → price · summary · stock · 사진 · 상세 설명
   editBtn.addEventListener("click", () => {
     const price = field("price", p.price, { inputMode: "numeric" });
     const summary = field("summary", p.summary);
     const stock = field("stock", p.stock, { inputMode: "numeric" });
     const photo = photoField();
+    const description = area("상세 설명 (description · 빈 줄로 문단을 나눕니다)", p.description);
     const ok = button("고친 내용 저장", "btn");
     const cancel = button("취소");
-    panel.replaceChildren(make("div", { className: "pa-inline" }, price.label, summary.label, stock.label, photo.label, ok, cancel));
+    panel.replaceChildren(make("div", { className: "pa-inline" }, price.label, summary.label, stock.label, photo.label, description.label, ok, cancel));
     msg.textContent = "";
     sync();
     price.input.focus();
@@ -204,6 +209,9 @@ function paint(id, note = "") {
       if (bad) { msg.textContent = bad; sync(); return; }
       ok.disabled = true;
       const patch = { price: nPrice, summary: summary.input.value.trim(), stock: nStock };
+      // 상세 설명은 바뀌었을 때만 적는다 — 없던 상품에 빈 description 이 생기지 않게
+      const nDescription = description.input.value.trim();
+      if (nDescription !== (p.description ?? "")) patch.description = nDescription;
       const okText = `고쳤습니다. price ${nPrice} · stock ${nStock}` + (file ? ` · imagePath products/${id}/main.jpg` : "");
       if (!(await save(patch, okText, file))) ok.disabled = false;
     });
@@ -263,6 +271,9 @@ newForm.addEventListener("submit", async e => {
   if (bad) { newMsg.textContent = bad; return; }
 
   const data = { name, price, summary: f.summary.value.trim(), stock, isVisible: false };
+  // 상세 설명은 적었을 때만 넣는다
+  const description = f.description.value.trim();
+  if (description) data.description = description;
   f.save.disabled = true;
   newMsg.textContent = "만드는 중…";
   let id = null;

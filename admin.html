@@ -17,6 +17,9 @@
   .pa-inline{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
   .pa-field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--gold-2)}
   .pa-field input{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px}
+  .pa-field.pa-wide{flex-basis:100%}
+  .pa-field textarea,#pa-new textarea{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px;line-height:1.6;resize:vertical}
+  #pa-new textarea{width:100%;margin:0 0 20px}
   .pa-msg{margin:8px 0 0;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all}
   .pa-msg:empty{display:none}
   .pa-thumb{display:block;width:48px;height:48px;object-fit:cover;border-radius:8px}
@@ -98,6 +101,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <input id="pa-price" name="price" inputmode="numeric" placeholder="1 이상의 정수" required>
       <label for="pa-summary">summary</label>
       <input id="pa-summary" name="summary">
+      <label for="pa-description">상세 설명 (description · 빈 줄로 문단을 나눕니다 · 적지 않아도 됩니다)</label>
+      <textarea id="pa-description" name="description" rows="8"></textarea>
       <label for="pa-stock">stock</label>
       <input id="pa-stock" name="stock" inputmode="numeric" placeholder="0 이상의 정수" required>
       <label for="pa-photo">사진 (고르지 않아도 됩니다)</label>
