@@ -60,6 +60,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <p class="lead" id="gate-wait">확인하고 있습니다…</p>
   <p class="lead" id="gate-login" hidden>로그인이 필요합니다 <a href="/login.html">로그인하러 가기</a></p>
   <p class="lead" id="gate-admin" hidden></p>
+  <div id="gate-info" hidden>
+    <p class="lead">로그인 : <span id="info-email" data-clarity-mask="true"></span></p>
+    <p class="lead">토큰을 받은 시각 : <span id="info-issued"></span></p>
+  </div>
   <div id="gate-denied" hidden>
     <p class="lead">권한이 없습니다</p>
     <button class="btn" type="button" id="btn-grant">주인 명찰 받기</button>
@@ -85,6 +89,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   const wait = document.querySelector("#gate-wait");
   const loginNote = document.querySelector("#gate-login");
   const adminNote = document.querySelector("#gate-admin");
+  const info = document.querySelector("#gate-info");
   const denied = document.querySelector("#gate-denied");
   const recheck = document.querySelector("#gate-recheck");
   const result = document.querySelector("#gate-result");
@@ -102,6 +107,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     loginNote.hidden = !!user;
     recheck.hidden = !user;
     adminNote.hidden = true;
+    info.hidden = true;
     denied.hidden = true;
     if (!user) { result.textContent = ""; return; }
 
@@ -110,6 +116,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if (role === "staff" || role === "admin") {
       adminNote.textContent = `관리자: ${role}`;
       adminNote.hidden = false;
+      // 지금 로그인한 이메일과, 이 토큰을 받은 시각(한국 시간)
+      document.querySelector("#info-email").textContent = user.email ?? "";
+      document.querySelector("#info-issued").textContent =
+        new Date(token.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
+      info.hidden = false;
     } else {
       denied.hidden = false;
     }
