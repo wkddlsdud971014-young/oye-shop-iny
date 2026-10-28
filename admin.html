@@ -16,6 +16,13 @@
   .pa-field select{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px}
   .pa-count{margin:16px 0 0;font-size:14px;color:var(--sub)}
   .pa-table tr.pa-out{display:none}
+  .pa-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .pa-tag{font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--gold-2);white-space:nowrap}
+  .pa-notice{margin-top:16px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;font-size:14px;color:var(--gold-2)}
+  .pa-notice .btn{padding:7px 16px;font-size:13px;margin-left:6px}
+  .pa-dialog{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:var(--round);padding:24px 28px;max-width:420px}
+  .pa-dialog::backdrop{background:rgba(5,3,14,.6)}
+  .pa-dialog p{margin:0 0 20px;font-size:16px}
   .pa-table td{vertical-align:middle;font-size:14px}
   .pa-table tr.pa-main td{border-bottom:0}
   .pa-table tr.pa-extra td{padding-top:0}
@@ -118,12 +125,15 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p class="pa-msg" id="pa-new-msg" role="status"></p>
     </form>
     <p class="pa-msg" id="pa-status" role="status"></p>
+    <!-- 방금 내린 상품을 되돌리는 안내 -->
+    <div class="pa-notice" id="pa-notice" role="status" hidden></div>
     <!-- 필터 · 검색 · 정렬 — 읽어 온 상품을 브라우저에서만 고른다 -->
     <div class="pa-tools">
       <div class="pa-filter" id="pa-filter" role="group" aria-label="필터">
         <button class="btn ghost" type="button" data-filter="all" aria-pressed="true">전체</button>
         <button class="btn ghost" type="button" data-filter="soldout" aria-pressed="false">품절만</button>
         <button class="btn ghost" type="button" data-filter="hidden" aria-pressed="false">숨김만</button>
+        <button class="btn ghost" type="button" data-filter="deleted" aria-pressed="false">내린 상품</button>
       </div>
       <label class="pa-field">상품명 검색
         <input type="search" id="pa-search" placeholder="이름 일부">
@@ -144,7 +154,27 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <tbody id="pa-body"></tbody>
       </table>
     </div>
+
+    <!-- 최근 활동 — 서버 함수가 adminLogs 에 남긴 기록을 읽기만 한다 -->
+    <h2 style="margin-top:40px">최근 활동</h2>
+    <button class="btn ghost" type="button" id="pa-log-reload">새로 읽기</button>
+    <p class="pa-msg" id="pa-log-status" role="status"></p>
+    <div class="pa-scroll">
+      <table class="cart pa-table">
+        <thead><tr><th>시각</th><th>상품</th><th>action</th><th>changedKeys</th></tr></thead>
+        <tbody id="pa-log-body"></tbody>
+      </table>
+    </div>
   </section>
+
+  <!-- 내리기 확인 창 -->
+  <dialog id="pa-confirm" class="pa-dialog">
+    <form method="dialog">
+      <p id="pa-confirm-text"></p>
+      <button class="btn" value="drop">내리기</button>
+      <button class="btn ghost" value="cancel">그만두기</button>
+    </form>
+  </dialog>
 
   <div id="gate-recheck" hidden style="margin-top:32px">
     <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>

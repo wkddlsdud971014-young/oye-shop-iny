@@ -5,7 +5,8 @@
 import "./auth.js";
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp
+  getFirestore, collection, doc, getDocs, addDoc, updateDoc, serverTimestamp, Timestamp, deleteField,
+  query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 
@@ -31,6 +32,52 @@ const freshPhoto = new Map();
 const stamp = () => ({ updatedAt: serverTimestamp() });
 // 서버 시각은 다시 읽기 전에는 모르므로, 화면 정렬에만 이 컴퓨터 시각을 어림값으로 넣어 둔다 (문서에는 쓰지 않는다)
 const stampLocal = () => ({ updatedAt: Timestamp.now() });
+
+// 저장이 끝난 값을 화면의 products 에도 옮긴다 — deleteField() 는 필드를 지우고, serverTimestamp() 는 이 컴퓨터 시각 어림값으로 둔다
+function applyLocal(target, patch) {
+  Object.entries(patch).forEach(([k, v]) => {
+    if (v && typeof v.isEqual === "function" && v.isEqual(deleteField())) delete target[k];
+    else if (v && typeof v.isEqual === "function" && v.isEqual(serverTimestamp())) target[k] = Timestamp.now();
+    else target[k] = v;
+  });
+}
+
+/* --- 내리기 확인 창 --- */
+// 브라우저 기본 confirm 대신 admin.html 의 <dialog> 를 쓴다. 「내리기」 를 고르면 true
+const confirmBox = document.querySelector("#pa-confirm");
+function confirmDrop(name) {
+  document.querySelector("#pa-confirm-text").textContent = `『${name}』을 가게에서 내립니다`;
+  confirmBox.returnValue = "";
+  confirmBox.showModal();
+  return new Promise(resolve => {
+    confirmBox.addEventListener("close", () => resolve(confirmBox.returnValue === "drop"), { once: true });
+  });
+}
+
+/* --- 표 위 안내 — 방금 내린 상품을 되돌리는 단추를 둔다 --- */
+const notice = document.querySelector("#pa-notice");
+let noticeId = null;
+function showUndo(id, name) {
+  noticeId = id;
+  const undo = button("되돌리기", "btn");
+  const text = make("span", { textContent: `『${name}』을 가게에서 내렸습니다. ` });
+  const err = make("p", { className: "pa-msg" });
+  undo.addEventListener("click", async () => {
+    const r = rows.get(id);
+    if (!r) return;
+    undo.disabled = true;
+    const fail = await r.restore();
+    if (fail) { err.textContent = fail; undo.disabled = false; }
+  });
+  notice.replaceChildren(text, undo, err);
+  notice.hidden = false;
+}
+function clearUndo(id) {
+  if (id !== undefined && id !== noticeId) return;
+  noticeId = null;
+  notice.replaceChildren();
+  notice.hidden = true;
+}
 
 // 오류 글은 줄이지 않고 그대로 보여 준다 — admin.html 과 같은 모양
 const errorLine = (head, err) => `${head}\n${err && err.code ? err.code : ""}\n${err && err.message ? err.message : String(err)}`;
@@ -110,18 +157,23 @@ function paint(id, note = "") {
   const sold = toggle(soldOut, "품절");
   const shown = toggle(p.isVisible === true, "노출");
   const editBtn = button("고치기");
+  // 내린 상품(deletedAt 이 있는 상품)은 「되돌리기」, 아니면 「내리기」. 문서를 지우는 단추는 없다
+  const dropped = p.deletedAt !== undefined;
+  const dropBtn = button(dropped ? "되돌리기" : "내리기");
+  // 내린 상품은 「되돌리기」 로만 다시 올린다 — 노출만 켜서 손님 가게에 나오지 않게 한다
+  if (dropped) { shown.input.disabled = true; shown.label.title = "내린 상품은 「되돌리기」 로 다시 올립니다"; }
   const thumb = cell();
   if (typeof p.imagePath === "string" && p.imagePath) paintThumb(thumb, id, p.imagePath);
 
   const main = make("tr", { className: "pa-main" },
     thumb,
     cell(make("code", { textContent: id })),
-    cell(String(p.name ?? "")),
+    cell(String(p.name ?? ""), ...(dropped ? [" ", make("span", { className: "pa-tag", textContent: "내림" })] : [])),
     cell(String(p.price ?? "")),
     cell(String(p.stock ?? "")),
     cell(sold.label),
     cell(shown.label),
-    cell(editBtn)
+    cell(make("div", { className: "pa-actions" }, editBtn, dropBtn))
   );
   // 아래 칸 — 재고 입력 · 고치기 칸이 열리고, 저장 결과와 오류가 이 행 바로 아래에 나온다
   const panel = make("div");
@@ -131,7 +183,7 @@ function paint(id, note = "") {
   const sync = () => { extra.hidden = !panel.childElementCount && !msg.textContent; };
   sync();
 
-  const controls = [sold.input, shown.input, editBtn];
+  const controls = [sold.input, shown.input, editBtn, dropBtn];
   // 저장하는 동안에는 이 행의 단추를 잠근다. 실패하면 오류를 남기고 false 를 돌려준다
   // file 이 있으면 사진을 먼저 올리고, 다 올라간 뒤에 imagePath 를 patch 와 함께 저장한다
   async function save(patch, okText, file = null) {
@@ -146,19 +198,38 @@ function paint(id, note = "") {
         head = `사진은 올라갔지만 문서를 저장하지 못했습니다. (${id})`;
         patch = { ...patch, imagePath: path };
       }
-      // 품절 · 노출 토글, 고치기, 사진 교체가 모두 여기서 저장된다 — 저장이 끝까지 된 때만 updatedAt 이 바뀐다
+      // 품절 · 노출 토글, 고치기, 사진 교체, 내리기 · 되돌리기가 모두 여기서 저장된다 — 저장이 끝까지 된 때만 updatedAt 이 바뀐다
       await updateDoc(doc(db, "products", id), { ...patch, ...stamp() });
-      Object.assign(products.get(id), patch, stampLocal());
+      applyLocal(products.get(id), { ...patch, ...stampLocal() });
       paint(id, okText);
       return true;
     } catch (err) {
       console.error(err);
       msg.textContent = errorLine(head, err);
       controls.forEach(c => { c.disabled = false; });
+      // 내린 상품의 노출 토글은 계속 잠가 둔다
+      if (dropped) shown.input.disabled = true;
       sync();
       return false;
     }
   }
+
+  // 되돌리기 → deletedAt 을 지우고 다시 가게에 보이게 한다. 사진 · 가격 · 재고는 그대로. 실패하면 오류 글을 돌려준다
+  async function restore() {
+    const ok = await save({ deletedAt: deleteField(), isVisible: true }, "되돌렸습니다. deletedAt 을 지우고 isVisible true");
+    if (ok) clearUndo(id);
+    return ok ? "" : msg.textContent;
+  }
+
+  // 내리기 → 확인 창에서 「내리기」 를 고르면 deletedAt 을 적고 숨긴다. 문서는 지우지 않는다
+  dropBtn.addEventListener("click", async () => {
+    if (dropped) { await restore(); return; }
+    const name = String(p.name ?? id);
+    if (!(await confirmDrop(name))) return;
+    if (await save({ deletedAt: serverTimestamp(), isVisible: false }, "가게에서 내렸습니다. deletedAt 을 적고 isVisible false · 「되돌리기」 로 다시 올릴 수 있습니다")) {
+      showUndo(id, name);
+    }
+  });
 
   // 품절 켜기 → stock 0 으로 저장. 끄기 → 1 이상 정수 재고를 받아 저장
   sold.input.addEventListener("change", async () => {
@@ -231,7 +302,7 @@ function paint(id, note = "") {
   } else {
     body.append(main, extra);
   }
-  rows.set(id, { main, extra });
+  rows.set(id, { main, extra, restore });
   // 저장하고 다시 그린 뒤에도 지금 필터 · 검색 · 정렬을 바로 다시 적용한다 — 조건에서 벗어난 행은 곧장 빠진다
   applyView();
 }
@@ -246,7 +317,8 @@ const view = { filter: "all", search: "", sort: "id" };
 
 const isSoldOut = p => p.stock === 0; // 재고가 숫자 0 인 상품만 — 음수 · 숫자가 아닌 재고는 넣지 않는다
 const isHidden = p => p.isVisible === false; // isVisible 이 false 인 상품만 — 필드가 없는 상품은 넣지 않는다
-const FILTERS = { all: () => true, soldout: isSoldOut, hidden: isHidden };
+const isDropped = p => p.deletedAt !== undefined; // deletedAt 필드가 있는 상품 — 내린 상품
+const FILTERS = { all: () => true, soldout: isSoldOut, hidden: isHidden, deleted: isDropped };
 const byName = (a, b) => String(a[1].name ?? "").localeCompare(String(b[1].name ?? ""), "ko", { numeric: true });
 const SORTS = {
   id: (a, b) => a[0].localeCompare(b[0], "en", { numeric: true }),
@@ -380,10 +452,49 @@ newForm.addEventListener("submit", async e => {
   }
 });
 
+/* --- 최근 활동 --- */
+// adminLogs 는 서버 함수 onProductWritten 이 쓴다. 여기서는 읽기만 한다 — at 이 늦은 것부터 10건
+const logBody = document.querySelector("#pa-log-body");
+const logStatus = document.querySelector("#pa-log-status");
+const logReload = document.querySelector("#pa-log-reload");
+const LOG_COUNT = 10;
+const ACTION_TEXT = { create: "create (만듦)", update: "update (고침)", delete: "delete (지움)" };
+
+async function loadLogs() {
+  logReload.disabled = true;
+  logStatus.textContent = "최근 활동을 읽고 있습니다…";
+  try {
+    const snap = await getDocs(query(collection(db, "adminLogs"), orderBy("at", "desc"), limit(LOG_COUNT)));
+    logBody.replaceChildren(...snap.docs.map(d => {
+      const l = d.data();
+      const when = l.at instanceof Timestamp
+        ? l.at.toDate().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })
+        : "";
+      // productId 로 상품 이름을 찾는다 — 표에 없으면 문서 ID 를 그대로 보여 준다
+      const p = products.get(l.productId);
+      const who = p && p.name ? String(p.name) : String(l.productId ?? "");
+      const keys = Array.isArray(l.changedKeys) ? l.changedKeys.join(", ") : "";
+      return make("tr", {}, cell(when), cell(who), cell(ACTION_TEXT[l.action] ?? String(l.action ?? "")), cell(keys));
+    }));
+    const read = new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul" });
+    logStatus.textContent = snap.empty
+      ? `아직 남은 활동이 없습니다. (${read} 에 읽음)`
+      : `최근 ${snap.size}건 · ${read} 에 읽음. 방금 고친 내용은 서버 함수가 적는 데 몇 초 걸릴 수 있습니다 — 「새로 읽기」 를 눌러 주세요.`;
+  } catch (err) {
+    console.error(err);
+    logStatus.textContent = errorLine("최근 활동을 읽지 못했습니다.", err);
+  } finally {
+    logReload.disabled = false;
+  }
+}
+logReload.addEventListener("click", loadLogs);
+
 /* --- admin.html 이 부른다 --- */
-export function showProductAdmin() {
+export async function showProductAdmin() {
   section.hidden = false;
-  return load();
+  // 상품을 먼저 읽어야 활동 기록에 상품 이름을 붙일 수 있다
+  await load();
+  await loadLogs();
 }
 
 export function hideProductAdmin() {
@@ -394,4 +505,7 @@ export function hideProductAdmin() {
   rows.clear();
   status.textContent = "";
   countLine.textContent = "";
+  clearUndo();
+  logBody.replaceChildren();
+  logStatus.textContent = "";
 }
