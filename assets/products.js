@@ -148,9 +148,17 @@ async function loadDetail() {
   try {
     const snap = await getDoc(doc(db, "products", id));
     countRead(snap.exists() ? 1 : 0);
+    // shop.js 목록에 없는 상품(관리 화면에서 만든 자동 ID 상품)은 app.js 가 상세를 못 그리고 「그런 상품이 없습니다」만 남긴다
+    // 그때는 Firestore 문서로 같은 모양의 틀을 여기서 그린다. 장바구니는 shop.js 목록으로만 움직이므로 담기 단추는 두지 않는다
+    if (!box.querySelector("h1")) {
+      if (!snap.exists()) {
+        box.innerHTML = `<p class="empty">그런 상품이 없습니다.<br>products/${esc(id)} 문서가 없습니다.</p>`;
+        return;
+      }
+      box.innerHTML = '<div class="thumb"></div><div><h1></h1><div class="price"></div></div>';
+    }
     // app.js 가 그린 상세(그림·설명·담기 단추)는 그대로 두고 글자만 바꾼다
     const h1 = box.querySelector("h1");
-    if (!h1) return;
     const price = box.querySelector(".price");
     if (!snap.exists()) {
       price.insertAdjacentHTML("afterend", '<p class="sum">Firestore 에 이 상품 문서가 없습니다.</p>');
@@ -171,7 +179,10 @@ async function loadDetail() {
     }
   } catch (err) {
     countRead(0);
-    box.insertAdjacentHTML("afterbegin", `<p class="empty">상품 정보를 불러오지 못했습니다.<br>${esc(err.code || "")} ${esc(err.message)}</p>`);
+    const failed = `<p class="empty">상품 정보를 불러오지 못했습니다.<br>${esc(err.code || "")} ${esc(err.message)}</p>`;
+    // app.js 가 그린 상세가 없으면 「그런 상품이 없습니다」 대신 읽기 실패만 보여 준다
+    if (box.querySelector("h1")) box.insertAdjacentHTML("afterbegin", failed);
+    else box.innerHTML = failed;
     console.error(err);
   }
 }
@@ -180,7 +191,6 @@ async function loadDetail() {
 // 장바구니 담기 단추 옆에 붙인다. 장바구니·결제 화면과는 따로 움직인다
 function paintOrderButton(box, id) {
   const cartBtn = box.querySelector("#add-to-cart");
-  if (!cartBtn) return;
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "btn";
@@ -190,7 +200,9 @@ function paintOrderButton(box, id) {
   msg.className = "lead";
   msg.setAttribute("role", "status");
   btn.addEventListener("click", () => orderNow(id, btn, msg, box));
-  cartBtn.after(" ", btn, msg);
+  // 담기 단추가 있으면 그 옆에, 없으면(자동 ID 상품) 재고 아래에 붙인다
+  if (cartBtn) cartBtn.after(" ", btn, msg);
+  else box.querySelector("h1").parentElement.append(btn, msg);
 }
 
 async function orderNow(id, btn, msg, box) {
