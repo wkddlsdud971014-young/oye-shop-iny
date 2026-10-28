@@ -459,6 +459,12 @@ const logStatus = document.querySelector("#pa-log-status");
 const logReload = document.querySelector("#pa-log-reload");
 const LOG_COUNT = 10;
 const ACTION_TEXT = { create: "create (만듦)", update: "update (고침)", delete: "delete (지움)" };
+// changedKeys 를 화면에 보여 줄 때만 한국어로 바꾼다 — adminLogs 문서의 값은 그대로 둔다. 표에 없는 필드는 영문 그대로
+const KEY_TEXT = {
+  deletedAt: "내림 표시", isVisible: "노출", stock: "재고", price: "가격", name: "이름",
+  summary: "설명", imagePath: "사진", updatedAt: "수정 시각", description: "상세 설명"
+};
+const keyText = k => (Object.hasOwn(KEY_TEXT, k) ? KEY_TEXT[k] : String(k));
 
 async function loadLogs() {
   logReload.disabled = true;
@@ -473,7 +479,7 @@ async function loadLogs() {
       // productId 로 상품 이름을 찾는다 — 표에 없으면 문서 ID 를 그대로 보여 준다
       const p = products.get(l.productId);
       const who = p && p.name ? String(p.name) : String(l.productId ?? "");
-      const keys = Array.isArray(l.changedKeys) ? l.changedKeys.join(", ") : "";
+      const keys = Array.isArray(l.changedKeys) ? l.changedKeys.map(keyText).join(", ") : "";
       return make("tr", {}, cell(when), cell(who), cell(ACTION_TEXT[l.action] ?? String(l.action ?? "")), cell(keys));
     }));
     const read = new Date().toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul" });
