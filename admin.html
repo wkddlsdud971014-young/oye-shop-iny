@@ -7,6 +7,20 @@
 <meta name="description" content="가게 주인과 직원이 쓰는 관리 화면 입구입니다">
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="assets/style.css">
+<style>
+  /* 상품 관리 표 — 관리 화면에서만 쓴다 */
+  .pa-scroll{overflow-x:auto;margin-top:16px}
+  .pa-table td{vertical-align:middle;font-size:14px}
+  .pa-table tr.pa-main td{border-bottom:0}
+  .pa-table tr.pa-extra td{padding-top:0}
+  .pa-toggle{white-space:nowrap;cursor:pointer}
+  .pa-inline{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+  .pa-field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--gold-2)}
+  .pa-field input{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px}
+  .pa-msg{margin:8px 0 0;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all}
+  .pa-msg:empty{display:none}
+  #pa-new{margin-top:16px}
+</style>
 
 <!-- 동의 기본값 — 태그 관리자보다 먼저 둡니다 -->
 <script>
@@ -70,6 +84,33 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <div id="gate-result" role="status" style="margin:12px 0 0;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
 
+  <!-- 상품 관리 표 — role 이 staff · admin 일 때만 보인다. 상품을 지우는 단추는 두지 않는다 -->
+  <section id="product-admin" hidden style="margin-top:40px">
+    <h2>상품 관리</h2>
+    <p class="lead">숨긴 상품까지 모두 보입니다.</p>
+    <button class="btn" type="button" id="pa-new-btn">새 상품</button>
+    <form class="pay" id="pa-new" hidden>
+      <label for="pa-name">name</label>
+      <input id="pa-name" name="name" required>
+      <label for="pa-price">price</label>
+      <input id="pa-price" name="price" inputmode="numeric" placeholder="1 이상의 정수" required>
+      <label for="pa-summary">summary</label>
+      <input id="pa-summary" name="summary">
+      <label for="pa-stock">stock</label>
+      <input id="pa-stock" name="stock" inputmode="numeric" placeholder="0 이상의 정수" required>
+      <button class="btn" type="submit" name="save">만들기</button>
+      <button class="btn ghost" type="reset">취소</button>
+      <p class="pa-msg" id="pa-new-msg" role="status"></p>
+    </form>
+    <p class="pa-msg" id="pa-status" role="status"></p>
+    <div class="pa-scroll">
+      <table class="cart pa-table">
+        <thead><tr><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th></tr></thead>
+        <tbody id="pa-body"></tbody>
+      </table>
+    </div>
+  </section>
+
   <div id="gate-recheck" hidden style="margin-top:32px">
     <button class="btn ghost" type="button" id="btn-recheck">다시 확인</button>
   </div>
@@ -82,6 +123,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js";
   // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
   import { auth, onUser } from "./assets/auth.js";
+  import { showProductAdmin, hideProductAdmin } from "./assets/admin-products.js";
 
   // 서버 함수 grantOwnerRole - us-central1 에 있다
   const grantOwnerRole = httpsCallable(getFunctions(getApp(), "us-central1"), "grantOwnerRole");
@@ -109,6 +151,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     adminNote.hidden = true;
     info.hidden = true;
     denied.hidden = true;
+    hideProductAdmin();
     if (!user) { result.textContent = ""; return; }
 
     const token = await user.getIdTokenResult(fresh);
@@ -121,6 +164,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       document.querySelector("#info-issued").textContent =
         new Date(token.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
       info.hidden = false;
+      // 상품 표도 같은 role 판단으로만 연다
+      await showProductAdmin();
     } else {
       denied.hidden = false;
     }

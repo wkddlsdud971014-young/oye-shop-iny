@@ -2,25 +2,16 @@
    그림(emoji)과 자세한 설명(detail)은 그대로 shop.js 의 것을 쓴다. */
 import { getApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDocs, getDoc, writeBatch, serverTimestamp,
+  getFirestore, collection, doc, getDocs, getDoc, serverTimestamp,
   query, where, orderBy, limit, startAfter, runTransaction
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { getStorage, ref, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-storage.js";
 // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
-import { auth, onUser } from "./auth.js";
+import { auth } from "./auth.js";
 import { showNotifyCard } from "./notify-card.js";
 
 const db = getFirestore(getApp());
 const storage = getStorage(getApp());
-
-// 상품 올리기로 등록할 다섯 장 — p1 은 넣지 않는다
-const SEED = {
-  p2: { stock: 30, isVisible: true },
-  p3: { stock: 8, isVisible: true },
-  p4: { stock: 0, isVisible: true },
-  p5: { stock: 5, isVisible: false },
-  p6: { stock: 40, isVisible: true }
-};
 
 /* --- 이번 화면에서 읽은 문서 수 --- */
 let readCount = 0;
@@ -250,54 +241,8 @@ async function orderNow(id, btn, msg, box) {
   }
 }
 
-/* --- 상품 올리기 (로그인한 사람에게만 보인다) --- */
-async function seedProducts(btn, msg) {
-  btn.disabled = true;
-  msg.textContent = "올리는 중…";
-  try {
-    const batch = writeBatch(db);
-    Object.entries(SEED).forEach(([id, extra]) => {
-      const p = findProduct(id);
-      batch.set(doc(db, "products", id), {
-        name: p.name,
-        price: p.price,
-        summary: p.summary,
-        stock: extra.stock,
-        isVisible: extra.isVisible,
-        createdAt: serverTimestamp()
-      });
-    });
-    await batch.commit();
-    msg.textContent = `상품 ${Object.keys(SEED).length}개(${Object.keys(SEED).join(", ")})를 올렸습니다.`;
-    await loadList();
-  } catch (err) {
-    msg.textContent = `상품을 올리지 못했습니다. 아무 문서도 바뀌지 않았습니다. 오류: ${err.code || ""} ${err.message}`;
-    console.error(err);
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function paintSeedButton(user) {
-  const slot = document.querySelector("#seed-slot");
-  if (!slot) return;
-  slot.replaceChildren();
-  if (!user) return;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "btn";
-  btn.textContent = "상품 올리기";
-  const msg = document.createElement("p");
-  msg.className = "lead";
-  msg.setAttribute("role", "status");
-  btn.addEventListener("click", () => seedProducts(btn, msg));
-  slot.append(btn, msg);
-}
-
 await domReady;
 const moreBtn = document.querySelector("#more-btn");
 if (moreBtn) moreBtn.addEventListener("click", () => loadMore(moreBtn));
 loadList();
 loadDetail();
-onUser(paintSeedButton);
