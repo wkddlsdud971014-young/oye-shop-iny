@@ -226,7 +226,63 @@ function paint(id, note = "") {
     body.append(main, extra);
   }
   rows.set(id, { main, extra });
+  // 저장하고 다시 그린 뒤에도 지금 필터 · 검색 · 정렬을 바로 다시 적용한다 — 조건에서 벗어난 행은 곧장 빠진다
+  applyView();
 }
+
+/* --- 필터 · 검색 · 정렬 --- */
+// 한 번 읽어 둔 products 로 브라우저에서만 고른다 — Firestore 를 다시 읽지 않는다
+const filterBox = document.querySelector("#pa-filter");
+const searchBox = document.querySelector("#pa-search");
+const sortBox = document.querySelector("#pa-sort");
+const countLine = document.querySelector("#pa-count");
+const view = { filter: "all", search: "", sort: "id" };
+
+const isSoldOut = p => p.stock === 0; // 재고가 숫자 0 인 상품만 — 음수 · 숫자가 아닌 재고는 넣지 않는다
+const isHidden = p => p.isVisible === false; // isVisible 이 false 인 상품만 — 필드가 없는 상품은 넣지 않는다
+const FILTERS = { all: () => true, soldout: isSoldOut, hidden: isHidden };
+const byName = (a, b) => String(a[1].name ?? "").localeCompare(String(b[1].name ?? ""), "ko", { numeric: true });
+const SORTS = {
+  id: (a, b) => a[0].localeCompare(b[0], "en", { numeric: true }),
+  // 재고가 숫자가 아니면 맨 뒤로, 재고가 같으면 이름순
+  stock: (a, b) => {
+    const sa = Number.isFinite(Number(a[1].stock)) ? Number(a[1].stock) : Infinity;
+    const sb = Number.isFinite(Number(b[1].stock)) ? Number(b[1].stock) : Infinity;
+    return sa - sb || byName(a, b);
+  },
+  name: byName
+};
+
+function applyView() {
+  const q = view.search.trim().toLowerCase();
+  const list = [...products.entries()].sort(SORTS[view.sort]);
+  let shown = 0;
+  list.forEach(([id, p]) => {
+    const r = rows.get(id);
+    if (!r) return;
+    const match = FILTERS[view.filter](p) && String(p.name ?? "").toLowerCase().includes(q);
+    r.main.classList.toggle("pa-out", !match);
+    r.extra.classList.toggle("pa-out", !match);
+    // 행을 옮겨도 열어 둔 고치기 칸과 단추는 그대로 따라간다
+    body.append(r.main, r.extra);
+    if (match) shown += 1;
+  });
+  countLine.textContent = `지금 보이는 상품 ${shown}개 / 전체 ${products.size}개`;
+}
+
+function changeView(key, value) {
+  view[key] = value;
+  applyView();
+}
+
+filterBox.addEventListener("click", e => {
+  const b = e.target.closest("button[data-filter]");
+  if (!b) return;
+  filterBox.querySelectorAll("button[data-filter]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  changeView("filter", b.dataset.filter);
+});
+searchBox.addEventListener("input", () => changeView("search", searchBox.value));
+sortBox.addEventListener("change", () => changeView("sort", sortBox.value));
 
 /* --- 모두 읽기 --- */
 // isVisible 로 거르지 않는다 — 숨긴 상품도 관리자에게는 보인다
@@ -246,6 +302,7 @@ async function load() {
     console.error(err);
     status.textContent = errorLine("상품을 읽지 못했습니다.", err);
   }
+  applyView();
 }
 
 /* --- 새 상품 --- */
@@ -324,4 +381,5 @@ export function hideProductAdmin() {
   products.clear();
   rows.clear();
   status.textContent = "";
+  countLine.textContent = "";
 }

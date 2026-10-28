@@ -9,7 +9,13 @@
 <link rel="stylesheet" href="assets/style.css">
 <style>
   /* 상품 관리 표 — 관리 화면에서만 쓴다 */
-  .pa-scroll{overflow-x:auto;margin-top:16px}
+  .pa-scroll{overflow-x:auto;margin-top:8px}
+  .pa-tools{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px;margin-top:20px}
+  .pa-filter{display:flex;gap:8px}
+  .pa-filter .btn[aria-pressed="true"]{color:var(--gold-2);border-color:var(--gold)}
+  .pa-field select{padding:8px 10px;border:1px solid var(--line-soft);border-radius:10px;background:rgba(10,6,24,.55);color:var(--ink);font:inherit;font-size:14px}
+  .pa-count{margin:16px 0 0;font-size:14px;color:var(--sub)}
+  .pa-table tr.pa-out{display:none}
   .pa-table td{vertical-align:middle;font-size:14px}
   .pa-table tr.pa-main td{border-bottom:0}
   .pa-table tr.pa-extra td{padding-top:0}
@@ -112,6 +118,25 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <p class="pa-msg" id="pa-new-msg" role="status"></p>
     </form>
     <p class="pa-msg" id="pa-status" role="status"></p>
+    <!-- 필터 · 검색 · 정렬 — 읽어 온 상품을 브라우저에서만 고른다 -->
+    <div class="pa-tools">
+      <div class="pa-filter" id="pa-filter" role="group" aria-label="필터">
+        <button class="btn ghost" type="button" data-filter="all" aria-pressed="true">전체</button>
+        <button class="btn ghost" type="button" data-filter="soldout" aria-pressed="false">품절만</button>
+        <button class="btn ghost" type="button" data-filter="hidden" aria-pressed="false">숨김만</button>
+      </div>
+      <label class="pa-field">상품명 검색
+        <input type="search" id="pa-search" placeholder="이름 일부">
+      </label>
+      <label class="pa-field">정렬
+        <select id="pa-sort">
+          <option value="id">문서 ID순</option>
+          <option value="stock">재고 적은 순</option>
+          <option value="name">이름순</option>
+        </select>
+      </label>
+    </div>
+    <p class="pa-count" id="pa-count" role="status"></p>
     <div class="pa-scroll">
       <table class="cart pa-table">
         <thead><tr><th>사진</th><th>문서 ID</th><th>name</th><th>price</th><th>stock</th><th>품절</th><th>노출</th><th></th></tr></thead>
