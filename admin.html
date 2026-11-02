@@ -38,6 +38,14 @@
   .pa-thumb{display:block;width:48px;height:48px;object-fit:cover;border-radius:8px}
   .pa-nophoto{font-size:12px;color:var(--sub)}
   #pa-new{margin-top:16px}
+  /* 관리 탭 — 상품 · 주문 */
+  .admin-tabs{display:flex;gap:8px;margin-top:32px}
+  .admin-tabs .btn[aria-selected="true"]{color:var(--gold-2);border-color:var(--gold)}
+  /* 주문 탭 */
+  .od-detail th{text-align:left;font-size:13px;color:var(--gold-2);white-space:nowrap}
+  .od-items{white-space:pre-wrap}
+  #od-detail{margin-top:24px}
+  #od-detail .pa-actions{margin-top:12px}
 </style>
 
 <!-- 동의 기본값 — 태그 관리자보다 먼저 둡니다 -->
@@ -102,6 +110,13 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   </div>
   <div id="gate-result" role="status" style="margin:12px 0 0;font-size:14px;color:var(--gold-2);white-space:pre-wrap;word-break:break-all"></div>
 
+  <!-- 관리 탭 — role 이 staff · admin 일 때만 보인다 -->
+  <div class="admin-tabs" id="admin-tabs" role="tablist" hidden>
+    <button class="btn ghost" type="button" role="tab" id="tab-btn-products" aria-controls="tab-products" aria-selected="true">상품</button>
+    <button class="btn ghost" type="button" role="tab" id="tab-btn-orders" aria-controls="tab-orders" aria-selected="false">주문</button>
+  </div>
+
+  <div id="tab-products" role="tabpanel" aria-labelledby="tab-btn-products">
   <!-- 상품 관리 표 — role 이 staff · admin 일 때만 보인다. 상품을 지우는 단추는 두지 않는다 -->
   <section id="product-admin" hidden style="margin-top:40px">
     <h2>상품 관리</h2>
@@ -166,6 +181,44 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       </table>
     </div>
   </section>
+  </div>
+
+  <div id="tab-orders" role="tabpanel" aria-labelledby="tab-btn-orders" hidden>
+  <!-- 주문 관리 — role 이 staff · admin 일 때만 보인다. 주문을 취소하는 단추는 두지 않는다 -->
+  <section id="order-admin" hidden style="margin-top:40px">
+    <h2>주문 관리</h2>
+    <p class="lead">최근에 들어온 주문부터 20건씩 읽습니다.</p>
+    <!-- 필터 — Firestore 에서 status 로 거른다 -->
+    <div class="pa-tools">
+      <div class="pa-filter" id="od-filter" role="group" aria-label="status 필터" style="flex-wrap:wrap">
+        <button class="btn ghost" type="button" data-status="all" aria-pressed="true">전체</button>
+        <button class="btn ghost" type="button" data-status="paid" aria-pressed="false">paid</button>
+        <button class="btn ghost" type="button" data-status="preparing" aria-pressed="false">preparing</button>
+        <button class="btn ghost" type="button" data-status="shipped" aria-pressed="false">shipped</button>
+        <button class="btn ghost" type="button" data-status="delivered" aria-pressed="false">delivered</button>
+        <button class="btn ghost" type="button" data-status="canceled" aria-pressed="false">canceled</button>
+      </div>
+    </div>
+    <p class="pa-msg" id="od-status" role="status"></p>
+    <div class="pa-scroll">
+      <table class="cart pa-table">
+        <thead><tr><th>주문 ID</th><th>totalPrice</th><th>status</th><th>createdAt</th><th></th></tr></thead>
+        <tbody id="od-body"></tbody>
+      </table>
+    </div>
+    <button class="btn ghost" type="button" id="od-more" hidden style="margin-top:12px">더 보기</button>
+    <div id="od-detail" hidden></div>
+  </section>
+  </div>
+
+  <!-- 주문 상태 바꾸기 확인 창 -->
+  <dialog id="od-confirm" class="pa-dialog">
+    <form method="dialog">
+      <p id="od-confirm-text"></p>
+      <button class="btn" value="move">바꾸기</button>
+      <button class="btn ghost" value="cancel">그만두기</button>
+    </form>
+  </dialog>
 
   <!-- 내리기 확인 창 -->
   <dialog id="pa-confirm" class="pa-dialog">
@@ -189,6 +242,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   // auth.js 가 앱을 먼저 연결해 두고, 로그인 상태도 알려 준다
   import { auth, onUser } from "./assets/auth.js";
   import { showProductAdmin, hideProductAdmin } from "./assets/admin-products.js";
+  import { showOrderAdmin, hideOrderAdmin } from "./assets/admin-orders.js";
 
   // 서버 함수 grantOwnerRole - us-central1 에 있다
   const grantOwnerRole = httpsCallable(getFunctions(getApp(), "us-central1"), "grantOwnerRole");
@@ -202,6 +256,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   const result = document.querySelector("#gate-result");
   const grantBtn = document.querySelector("#btn-grant");
   const recheckBtn = document.querySelector("#btn-recheck");
+  const tabs = document.querySelector("#admin-tabs");
+  const tabProducts = document.querySelector("#tab-products");
+  const tabOrders = document.querySelector("#tab-orders");
+  const tabBtnProducts = document.querySelector("#tab-btn-products");
+  const tabBtnOrders = document.querySelector("#tab-btn-orders");
+
+  // 탭 고르기 — 주문 탭은 처음 열 때 주문을 읽는다
+  function selectTab(name) {
+    const orders = name === "orders";
+    tabBtnProducts.setAttribute("aria-selected", String(!orders));
+    tabBtnOrders.setAttribute("aria-selected", String(orders));
+    tabProducts.hidden = orders;
+    tabOrders.hidden = !orders;
+    if (orders) showOrderAdmin();
+  }
+  tabBtnProducts.addEventListener("click", () => selectTab("products"));
+  tabBtnOrders.addEventListener("click", () => selectTab("orders"));
 
   // 오류 글은 줄이지 않고 그대로 보여 준다
   const errorLine = (head, err) => `${head}\n${err && err.code ? err.code : ""}\n${err && err.message ? err.message : String(err)}`;
@@ -217,6 +288,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     info.hidden = true;
     denied.hidden = true;
     hideProductAdmin();
+    hideOrderAdmin();
+    tabs.hidden = true;
     if (!user) { result.textContent = ""; return; }
 
     const token = await user.getIdTokenResult(fresh);
@@ -229,7 +302,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       document.querySelector("#info-issued").textContent =
         new Date(token.issuedAtTime).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" });
       info.hidden = false;
-      // 상품 표도 같은 role 판단으로만 연다
+      // 탭 · 상품 표 · 주문 탭도 같은 role 판단으로만 연다. 처음에는 상품 탭
+      tabs.hidden = false;
+      selectTab("products");
       await showProductAdmin();
     } else {
       denied.hidden = false;
