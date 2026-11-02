@@ -14,6 +14,7 @@ const status = document.querySelector("#sa-status");
 const head = document.querySelector("#sa-head");
 const counted = document.querySelector("#sa-counted");
 const canvas = document.querySelector("#sa-chart");
+const sum = document.querySelector("#sa-sum");
 const tableHead = document.querySelector("#sa-thead");
 const body = document.querySelector("#sa-body");
 const reloadBtn = document.querySelector("#sa-reload");
@@ -92,6 +93,17 @@ function paintChart(days) {
   return "";
 }
 
+/* --- 7일 합계 한 줄 --- */
+// 이미 읽은 7일 문서만 더한다 — Firestore 를 다시 읽지 않는다. 문서가 없는 날은 더하지 않고 날 수만 센다
+function sumText(days) {
+  const have = days.filter(d => d.stats);
+  const sales = have.reduce((n, d) => n + (Number(d.stats.totalSales) || 0), 0);
+  const orders = have.reduce((n, d) => n + (Number(d.stats.orderCount) || 0), 0);
+  const missing = days.length - have.length;
+  const note = missing ? `(집계 없는 날 ${missing}일은 빼고 더함)` : "(집계 없는 날 없음)";
+  return `최근 7일 합계 ${sales.toLocaleString("ko-KR")}원 - 주문 ${orders.toLocaleString("ko-KR")}건 ${note}`;
+}
+
 /* --- 표 --- */
 function paintTable(days) {
   // canceledCount 가 있는 날이 하루라도 있으면 칸을 둔다
@@ -133,6 +145,7 @@ async function load() {
       ? `마지막으로 센 시각 : ${when(latest.stats.countedAt)}`
       : "";
     const chartNote = paintChart(days);
+    sum.textContent = sumText(days);
     paintTable(days);
     const have = days.filter(d => d.stats).length;
     status.textContent = `${days[0].label} ~ ${days[DAYS - 1].label} 중 ${have}일 집계를 읽었습니다.` + (chartNote ? `\n${chartNote}` : "");
@@ -164,6 +177,7 @@ export function hideSalesAdmin() {
   status.textContent = "";
   head.textContent = "";
   counted.textContent = "";
+  sum.textContent = "";
   tableHead.replaceChildren();
   body.replaceChildren();
   reloadBtn.disabled = false;
