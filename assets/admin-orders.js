@@ -134,9 +134,16 @@ function line(label, value) {
   return make("tr", {}, make("th", { textContent: label, scope: "row" }), cell(value));
 }
 
+// 브라우저 주문(products.js · done.js)은 { productId, name, price, quantity },
+// 결제 웹훅 주문(functions/index.js)은 { id, qty } 로 적힌다 — 이름이 없으면 상품 ID 를 보여 준다
+const firstOf = (...vals) => vals.find(v => v !== undefined && v !== null && v !== "");
 function itemsText(items) {
   if (!Array.isArray(items) || !items.length) return "";
-  return items.map(it => `${it && it.id !== undefined ? it.id : "?"} × ${it && it.qty !== undefined ? it.qty : "?"}`).join("\n");
+  return items.map(it => {
+    const name = firstOf(it?.name, it?.productId, it?.id) ?? "?";
+    const qty = firstOf(it?.quantity, it?.qty) ?? "?";
+    return `${name} × ${qty}`;
+  }).join("\n");
 }
 
 // note 가 있으면 상세 아래에 남겨 둔다 (바꿨다는 알림 같은 것)
