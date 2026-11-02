@@ -62,6 +62,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /dailyStats/{day} {
+      allow read: if isStaff();
+      allow write: if false;
+    }
+
     // 그 밖의 모든 문서는 접근 금지
     match /{document=**} {
       allow read, write: if false;

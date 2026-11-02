@@ -71,3 +71,23 @@ test("손님이 주문하며 상품 재고를 하나 줄인다", async () => {
   const 손님 = testEnv.authenticatedContext("cust01");
   await assertSucceeds(setDoc(doc(손님.firestore(), "products/p1"), { stock: 9 }, { merge: true }));
 });
+
+// 실습 218: 일별 집계 dailyStats - 관리자만 읽는다
+// 집계 문서 한 장을 규칙을 끈 채로 넣어 둔다
+async function seedDailyStats() {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "dailyStats/20261101"), { orderCount: 3, totalPrice: 36000, canceledCount: 1 });
+  });
+}
+
+test("관리자가 일별 집계 dailyStats/20261101 을 읽는다", async () => {
+  await seedDailyStats();
+  const 관리자 = testEnv.authenticatedContext("admin01", { role: "admin" });
+  await assertSucceeds(getDoc(doc(관리자.firestore(), "dailyStats/20261101")));
+});
+
+test("손님이 일별 집계 dailyStats/20261101 을 읽는다", async () => {
+  await seedDailyStats();
+  const 손님 = testEnv.authenticatedContext("cust01");
+  await assertFails(getDoc(doc(손님.firestore(), "dailyStats/20261101")));
+});
